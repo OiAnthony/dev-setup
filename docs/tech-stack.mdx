@@ -1,0 +1,223 @@
+---
+title: 前端全栈工程师软件清单
+description: 一个全栈工程师必备的开发工具和环境配置清单
+icon: List
+---
+
+本文整理了一个前端全栈工程师在日常开发中必备的软件工具清单。
+
+## 开发环境
+
+| 类别 | 工具 | 版本 | 说明 |
+|------|------|------|------|
+| **包管理器** | Node.js | v24.12.0 | JavaScript 运行时 |
+| | npm | 11.6.2 | Node 包管理器 |
+| | Bun | 1.3.5 | 快速的 JS 运行时和包管理器 |
+| | pnpm | 10.26.1 | 高效的磁盘节约型包管理器 |
+| | uv | 0.9.18 | 快速的 Python 包管理器和项目管理 |
+| | Volta | - | JavaScript 工具链版本管理 |
+| **编程语言** | TypeScript | 5.9.3 | 带类型的 JS 超集 |
+| | Python | 3.14.2 | 通用编程语言 |
+| | Go | 1.25.5 | 高性能编译型语言 |
+| | Rust | 1.92.0 | 系统级编程语言 |
+| | Java | 17 | OpenJDK 企业级开发 |
+| **版本控制** | Git | 2.50.1 | 分布式版本控制 |
+| | lazygit | 0.57.0 | 终端 Git 客户端 |
+| | SDKMAN | - | JVM 工具包版本管理 |
+
+## 编辑器与 IDE
+
+### 轻量级编辑器
+
+**Visual Studio Code - Insiders** - 微软代码编辑器预览版  
+**Zed** - 高性能现代化编辑器
+
+### JetBrains 系列
+
+**JetBrains Toolbox** - IDE 统一管理工具，已安装：
+
+- **IntelliJ IDEA Ultimate** - Java 和 Kotlin
+- **PyCharm** - Python 开发
+- **Android Studio** - Android 应用开发
+
+### VS Code 扩展推荐
+
+主题和外观 • 代码格式化 • 语言支持（TypeScript, Go, Rust, Python） • Git 集成 • 代码片段和智能提示
+
+## Agentic Coding
+
+| 工具 | 类型 | 说明 |
+|------|------|------|
+| **OpenCode** | 编辑器 | AI 辅助的代码编辑器 |
+| **OpenCode Desktop** | CLI | AI 辅助的命令行工具 |
+| **Claude Code** | CLI | Anthropic Claude AI 编程助手 |
+| **Windsurf** | 编辑器 | AI 驱动的智能编辑器 |
+| **droid** | CLI | 0.40.1 - AI 代码生成与辅助工具 |
+| **openspec** | CLI | 0.17.2 - OpenAPI 规范工具（命令：openspec view） |
+
+**Agentic Coding** 工具集成了 AI 能力，能够理解代码上下文，自主执行多步骤任务，显著提升开发效率。
+
+## 终端与 Shell
+
+| 工具 | 版本 | 用途 |
+|------|------|------|
+| **iTerm2** | - | 功能强大的 macOS 终端替代品 |
+| **Warp** | - | 现代化终端应用程序 |
+| **Zsh** | - | 核心 Shell |
+| **oh-my-zsh** | - | Zsh 框架和插件管理 |
+| **Starship** | - | 跨 Shell 提示符 |
+| **fzf** | - | 命令行模糊搜索工具 |
+| **fd** | - | 快速文件查找工具 |
+| **rg (ripgrep)** | - | 超快速文本搜索工具 |
+| **zoxide** | - | 智能目录跳转工具（命令：zi） |
+| **gitsu** | - | 快速切换 Git 用户配置 |
+| **htop** | - | 交互式进程监控工具 |
+| **btop** | - | 现代化系统资源监控 |
+
+### Shell 别名配置
+
+```bash
+# 常用别名（配置在 ~/.zshrc）
+alias docker="podman"              # 用 podman 替代 docker
+alias code="code-insiders"         # 使用 VS Code Insiders
+alias python="python3"
+alias pip="pip3"
+alias ll="ls -la"                  # 列出详细信息
+```
+
+### 快捷打开目录
+
+```bash
+code .          # 用 VS Code 打开当前目录
+idea .          # 用 IntelliJ IDEA 打开当前目录
+surf .          # 用 Windsurf 打开当前目录
+zi <dir>        # 快速跳转到常用目录（zoxide）
+```
+
+## Android 开发工具
+
+| 工具 | 用途 |
+|------|------|
+| **adb** | Android Debug Bridge - 调试和通信工具 |
+| **aapt** | Android Asset Packaging Tool - 资源打包工具 |
+| **Android Studio** | 官方 IDE |
+
+## 数据库与容器
+
+| 工具 | 支持的数据库 |
+|------|-------------|
+| **Chat2DB Pro** | MySQL, PostgreSQL, MongoDB 等 |
+| **Redis Insight** | Redis 数据库可视化 |
+| **Podman** | 5.7.1 | 容器管理工具（CLI + Desktop） |
+
+## 浏览器与 API 工具
+
+### 浏览器
+
+**Google Chrome** - 主流浏览器，强大的开发者工具
+
+**开发者工具功能**：元素检查 • 网络请求分析 • JS 调试 • 性能分析 • 本地存储管理
+
+### Chrome 插件
+
+| 插件名称 | 插件介绍 | 插件地址（Chrome商店） |
+|---------|---------|------------------------|
+| X (Twitter) Video Downloader | X (Twitter) 视频下载工具 | https://chromewebstore.google.com/detail/akmdionenlnfcipmdhbhcnkighafmdha |
+| Lighthouse | Chrome 开发者工具，用于性能、可访问性和最佳实践审计 | https://chromewebstore.google.com/detail/blipmdconlkpinefehnmjammfjpmpbjk |
+| 沉浸式翻译 \| PDF翻译 \| 免费 | 支持网页/文档/PPT双语对照翻译，兼容DeepL、Google等工具 | https://chromewebstore.google.com/detail/bpoadfkcbjbfhfodiogcnhhhpibjhbnh |
+| Modern for Hacker News | Hacker News的重新设计网页界面 | https://chromewebstore.google.com/detail/dabkegjlekdcmefifaolmdhnhdcplklo |
+| 豆包，浏览器 AI 助手 | 豆包AI助手，可辅助写邮件、总结新闻、写论文/周报，还能快速写代码 | 下架了？https://chromewebstore.google.com/detail/dbjibobgilijgolhjdcbdebjhejelffo |
+| Dark Reader | 为每个网站启用暗色模式、护眼模式，使用暗主题进行夜间网页浏览 | https://chromewebstore.google.com/detail/eimadpbcbfnmbkopoojfekhnkhdbieeh |
+| Proton Pass: Free Password Manager | 免费且完全加密的密码管理器，用于保管登录信息和密码 | https://chromewebstore.google.com/detail/ghmbeldphafepmbegfdlkpapadhbakde |
+| Wappalyzer | 识别网页所使用的技术栈 | https://chromewebstore.google.com/detail/gppongmhjkpfnbhagpmjfkannfbllamg |
+| CSS Peeper | 快速检查网站样式，提升工作流效率，节省工作时间 | https://chromewebstore.google.com/detail/mbnbehikldjhnfehhnaidhjhoofhpehk |
+| 复制链接到剪贴板 | 复制URL、标题等，支持HTML、Markdown、纯文本等多种格式 | https://chromewebstore.google.com/detail/miancenhdlkbmjmhlginhaaepbdnlllc |
+| AdBlocker Ultimate | 广告拦截工具，禁止在YouTube、Facebook和所有网站上的广告 | https://chromewebstore.google.com/detail/ohahllgiabjaoigichmmfljhkcfikeof |
+
+### API 开发
+
+**Apifox** - API 设计、调试、文档一体化工具  
+**Reqable** - API 抓包和调试工具
+
+## 生产力工具
+
+### 系统效率
+
+**Raycast** - macOS 启动器和生产力工具，替代 Spotlight  
+**uTools** - 便捷工具箱，快速启动和插件平台  
+**Rectangle** - 窗口管理工具，快捷键调整窗口大小  
+**PixPin** - 强大的截图和标注工具  
+**Ice** - 菜单栏图标管理工具
+
+### 知识管理
+
+**Obsidian** - 基于本地文件的笔记应用，支持双向链接  
+**Proton Pass** - 安全的密码管理工具
+
+### 其他
+
+**Xcode** - macOS 和 iOS 应用开发工具链
+
+## 使用偏好
+
+基于命令历史分析，我的开发工作流偏好：
+
+- **Agentic Coding 优先**：频繁使用 OpenCode、Claude Code、Windsurf 等 AI 辅助工具
+- **多编辑器切换**：VS Code Insiders、IntelliJ IDEA、Windsurf 根据项目类型选择
+- **Bun 开发体验**：使用 Bun 作为首选包管理器和运行时
+- **Podman 容器化**：通过别名 `docker="podman"` 无缝使用 Podman
+- **智能目录跳转**：使用 zoxide 的 `zi` 命令快速切换项目目录
+- **API 调试**：结合 curl、openspec、Reqable 等工具进行接口测试
+
+## 前端技术栈
+
+基于当前项目配置，推荐的前端技术栈：
+
+```ts
+{
+  "framework": "TanStack Start",
+  "router": "TanStack Router",
+  "ui": "React 19 + Fumadocs UI",
+  "styling": "Tailwind CSS 4",
+  "typescript": "5.9.3",
+  "bundler": "Vite 7.2.7",
+  "packageManager": "Bun 1.3.5"
+}
+```
+
+**关键依赖**：@tanstack/react-router • @tanstack/react-start • fumadocs-ui • lucide-react
+
+## 安装命令
+
+```bash
+# 安装开发工具
+brew install node bun go rust python3 lazygit fzf fd starship zoxide htop btop uv
+
+# 安装 oh-my-zsh
+sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+
+# 安装 SDKMAN!
+curl -s "https://get.sdkman.io" | bash
+
+# 安装 Volta
+curl https://get.volta.sh | bash
+
+# 安装图形应用
+brew install --cask visual-studio-code-insiders iterm2 warp chat2db-pro redis-insight
+
+# 环境变量配置
+export PATH="/opt/homebrew/bin:$PATH"
+eval "$(starship init zsh)"
+eval "$(zoxide init zsh)"
+source "$HOME/.sdkman/bin/sdkman-init.sh"
+```
+
+## 总结
+
+这套软件清单涵盖了前端全栈工程师的主要需求：高效开发环境（多语言 + 包管理器）、强大编辑器（VS Code + JetBrains）、便捷终端（iTerm2 + Warp）、完善数据库工具（Chat2DB Pro + Redis Insight）、主流浏览器（Chrome + Edge + Safari）。根据项目需求和个人偏好，可适当增删工具，关键是建立适合自己的高效开发工作流。
+
+<Cards>
+  <Card title="TanStack Start 官方文档" href="https://tanstack.com/start" />
+  <Card title="Fumadocs 文档" href="https://fumadocs.dev" />
+  <Card title="Bun 官网" href="https://bun.sh" />
+</Cards>
