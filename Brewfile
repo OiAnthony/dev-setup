@@ -3,8 +3,8 @@ brew "git"
 brew "gh"
 brew "git-delta"
 brew "lazygit"
-# tap "matsuyoshi30/gitsu"
-# brew "gitsu"  # 可选：Git 用户切换工具，需要手动安装: brew install matsuyoshi30/gitsu/gitsu
+tap "matsuyoshi30/gitsu"
+brew "gitsu"
 
 # 编程语言
 brew "python@3.14"
@@ -32,3 +32,7 @@ brew "jq"
 
 # Python 包管理
 brew "uv"
+
+# 字体
+cask "font-maple-mono-nf-cn"
+cask "font-jetbrains-mono-nerd-font"
