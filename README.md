@@ -1,6 +1,6 @@
 # 开发环境自动化配置
 
-快速在新 macOS 或 Linux（Ubuntu）机器上还原开发环境。支持 Oh My Zsh + Kaku 双系统优化，启动性能提升 80-120ms。
+快速在新 macOS 或 Linux（Ubuntu）机器上还原开发环境。支持 Oh My Zsh + Kaku 双系统优化，启动性能提升 80-120ms。中国大陆网络自动切换 USTC 镜像加速。
 
 ## 快速开始
 
@@ -38,7 +38,7 @@ source ~/.zshrc
 
 **编程语言**：
 
-- Node.js
+- Node.js（通过 Volta 版本管理器安装）
 - Python 3.14 + uv（现代 Python 包管理器）
 - Go
 
@@ -58,12 +58,23 @@ source ~/.zshrc
 - tree（目录树）
 - jq（JSON 处理）
 
-### 可选工具（交互式安装）
+**字体**：
 
-- Bun（JavaScript 运行时）
-- pnpm（Node.js 包管理器）
-- SDKMAN（Java 版本管理）
-- podman（Docker 替代品，需取消注释 Brewfile）
+- Maple Mono Nerd Font CN（中文优化）
+- JetBrains Mono Nerd Font
+
+### 自动安装工具（install.sh）
+
+以下工具由 `install.sh` 自动安装，无需手动操作：
+
+- **Volta**：Node.js 版本管理器（自动安装 Node.js）
+- **Bun**：JavaScript 运行时和包管理器
+- **pnpm**：快速的 Node.js 包管理器
+- **SDKMAN**：Java/Kotlin/Scala 版本管理器
+
+### 可选工具
+
+- **podman**：Docker 替代品（免费商用），需取消注释 Brewfile 中的 `# brew "podman"`
 
 ## 配置文件说明
 
@@ -80,9 +91,11 @@ source ~/.zshrc
 
 | 别名 | 实际命令 | 说明 |
 |------|---------|------|
-| `docker` | `podman` | 使用 podman 替代 docker |
-| `code` | `code-insiders` | VS Code Insiders |
+| `docker` | `podman` | 使用 podman 替代 docker（如已安装） |
+| `code` | `code-insiders` | VS Code Insiders（如已安装） |
 | `python` | `python3` | Python 3 |
+| `pip` | `pip3` | Python 3 包管理器 |
+| `cc` | `claude` | Claude Code CLI |
 | `oc` | `opencode` | OpenCode CLI |
 | `y` | yazi 函数 | 文件管理器（支持 cd 跟随） |
 
@@ -145,16 +158,22 @@ git push
 
 ```
 dev-setup/
-├── install.sh              # 主安装脚本（智能检测 Kaku）
+├── install.sh              # 主安装脚本（Homebrew、Oh My Zsh、Volta、Bun、pnpm、SDKMAN）
 ├── Brewfile                # 软件清单（Homebrew Bundle）
+├── Makefile                # 测试命令入口（make test-all）
+├── Dockerfile              # Docker 测试环境（Ubuntu 24.04 + Homebrew）
+├── CLAUDE.md               # Claude Code 项目指南
+├── AGENTS.md               # 同 CLAUDE.md（兼容性）
 ├── dotfiles/               # 配置文件
 │   ├── dev-setup.zsh      # 统一环境配置（通过 source 加载）
 │   ├── .gitconfig         # Git 配置（软链接到 ~/.gitconfig）
 │   └── starship.toml      # Starship 配置（软链接到 ~/.config/starship.toml）
-├── docs/                   # 文档
-│   ├── zsh-optimization.md # Zsh 性能优化说明
-│   └── tech-stack.mdx      # 技术栈说明
-└── README.md
+├── scripts/                # 测试脚本
+│   ├── test-install.sh    # 集成测试（支持 --with-kaku 参数）
+│   └── test-idempotent.sh # 幂等性测试
+└── docs/                   # 文档
+    ├── zsh-optimization.md # Zsh 性能优化说明
+    └── testing.md          # 测试架构文档
 ```
 
 ## 特性
@@ -164,7 +183,9 @@ dev-setup/
 - ✅ 智能 Kaku 集成（自动检测并优化）
 - ✅ 模块化配置（通过 source 加载，不覆盖现有 .zshrc）
 - ✅ 软链接管理（配置文件自动同步）
-- ✅ 交互式可选工具安装
+- ✅ 中国大陆镜像加速（自动检测网络环境，切换 USTC 镜像）
+- ✅ 自动安装工具链（Volta、Bun、pnpm、SDKMAN）
+- ✅ Docker 隔离测试（验证安装脚本正确性）
 
 ## 测试
 
@@ -190,11 +211,14 @@ make test-idempotent   # 幂等性测试
 
 ### CI/CD
 
-GitHub Actions 会在每次 push 或 PR 时自动运行：
+本地测试使用 Docker 容器验证安装脚本：
+
 - ShellCheck 静态检查
 - Docker 容器集成测试
 - Kaku 检测逻辑验证
 - 幂等性验证
+
+详见 `docs/testing.md`。
 
 ## 注意事项
 

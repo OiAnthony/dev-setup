@@ -10,12 +10,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **模块化配置**：通过 `source` 加载 `dev-setup.zsh`，不覆盖用户的 `~/.zshrc`
 - **智能 Kaku 集成**：自动检测 Kaku.app 并跳过插件重复安装，优化启动性能 80-120ms
 - **软链接管理**：配置文件通过软链接同步，修改后自动反映到 repo
+- **中国大陆镜像**：自动检测网络环境，中国大陆自动切换 USTC 镜像加速（可通过 `DEV_SETUP_CHINA_MIRROR=1/0` 覆盖）
 
 ## 核心命令
 
-### 安装和测试
+### 安装和验证
+
 ```bash
-# 完整安装（会提示可选工具）
+# 完整安装（自动安装 Homebrew、Oh My Zsh、Volta、Bun、pnpm、SDKMAN）
 ./install.sh
 
 # 测试配置加载
@@ -28,7 +30,20 @@ ls -la ~/.gitconfig ~/.config/starship.toml
 time zsh -i -c exit
 ```
 
+### 测试（Docker 隔离环境）
+
+```bash
+make lint              # ShellCheck 静态检查
+make test              # 集成测试（验证完整安装流程）
+make test-kaku         # Kaku 路径测试（验证插件跳过逻辑）
+make test-idempotent   # 幂等性测试（验证重复运行安全）
+make test-all          # 运行所有测试（lint + 上述三项）
+make build             # 仅构建 Docker 镜像
+make clean             # 清理 Docker 镜像
+```
+
 ### 维护工作流
+
 ```bash
 # 同步本机 Homebrew 包到 repo
 brew bundle dump --force
@@ -48,12 +63,15 @@ git commit -m "chore: update configuration"
 ```
 ~/.zshrc
   └─> source dev-setup.zsh
+        ├─> 基础环境（PATH, EDITOR）
         ├─> Oh My Zsh (plugins: git, npm, node, docker, python, docker-compose)
-        ├─> 检测 Kaku 是否存在
-        │     ├─> 存在: source ~/.config/kaku/zsh/kaku.zsh (Kaku 管理插件)
-        │     └─> 不存在: 手动加载 zsh-autosuggestions, zsh-syntax-highlighting, zsh-completions
-        ├─> fzf, zoxide, yazi 初始化
-        └─> 环境变量 (pnpm, bun, SDKMAN, Android SDK, Go)
+        ├─> Homebrew 镜像检测（中国大陆自动切换 USTC，结果缓存 1 天）
+        ├─> 别名（podman→docker, code-insiders→code, python→python3 等）
+        ├─> CLI 工具初始化（fzf, zoxide, yazi, thefuck 懒加载）
+        ├─> 包管理器（Volta, pnpm, bun, SDKMAN 懒加载, Go）
+        └─> 检测 Kaku 是否存在
+              ├─> 存在: source ~/.config/kaku/zsh/kaku.zsh (Kaku 管理插件+Starship+别名+历史)
+              └─> 不存在: 手动初始化 Starship, 插件, 历史, 补全, git 别名
 ```
 
 ### Kaku 集成逻辑
@@ -68,6 +86,7 @@ git commit -m "chore: update configuration"
   - 不存在：手动初始化 Starship 和插件
 
 **性能优化**：
+
 - Oh My Zsh 设置 `ZSH_THEME=""` 禁用主题（避免与 Starship 冲突）
 - 插件列表仅保留 Oh My Zsh 独有的（git, npm, node, docker, python, docker-compose）
 - 移除 `zsh-syntax-highlighting`, `zsh-autosuggestions`, `zsh-completions`（由 Kaku 管理）
@@ -86,54 +105,62 @@ git commit -m "chore: update configuration"
 ## 修改配置文件时的注意事项
 
 ### 修改 dev-setup.zsh
+
 - **PATH 顺序**：`$HOME/.local/bin` 优先级最高，避免系统工具被覆盖
 - **条件加载**：所有可选工具（bun, pnpm, SDKMAN）都需检查文件是否存在
 - **Kaku 检测**：必须保持 `if [[ -f "$HOME/.config/kaku/zsh/kaku.zsh" ]]` 逻辑
 
 ### 修改 install.sh
+
 - **幂等性**：使用 `if [[ ! -d ... ]]` 检查避免重复安装
 - **追加模式**：使用 `grep -q` 检查 `~/.zshrc` 是否已包含配置
 - **Kaku 检测**：在安装插件前检查 `$HOME/.config/kaku/zsh/kaku.zsh`
 
 ### 修改 Brewfile
+
 - **注释可选工具**：如 `# brew "podman"` 需用户手动取消注释
 - **同步命令**：修改后运行 `brew bundle dump --force` 覆盖
 
 ### 修改 .gitconfig
+
 - **占位符**：保留 `Your Name` 和 `your.email@example.com` 提示用户修改
 - **delta 配置**：`side-by-side = true` 依赖终端宽度，窄屏用户可能需调整
 
 ## 常见问题
 
 ### Zsh 启动慢
+
 1. 检查是否重复加载插件：`echo $fpath | tr ' ' '\n' | grep -E '(autosuggestions|syntax-highlighting)'`
 2. 确认 Kaku 检测逻辑正确：`[[ -f "$HOME/.config/kaku/zsh/kaku.zsh" ]] && echo "Kaku detected"`
-3. 参考 `docs/zsh-optimization.md`
+3. 清理工具初始化缓存：`dev-setup-clear-cache`（清除 fzf/zoxide/starship 缓存文件）
+4. 参考 `docs/zsh-optimization.md`
 
 ### 软链接失效
+
 ```bash
 # 重新创建软链接
 ln -sf "$(pwd)/dotfiles/.gitconfig" ~/.gitconfig
 ln -sf "$(pwd)/dotfiles/starship.toml" ~/.config/starship.toml
 ```
 
-### 可选工具未安装
-- Bun: `curl -fsSL https://bun.sh/install | bash`
-- pnpm: `curl -fsSL https://get.pnpm.io/install.sh | sh -`
-- SDKMAN: `curl -s "https://get.sdkman.io" | bash`
-
 ## 文件结构
 
 ```
 dev-setup/
-├── install.sh              # 主安装脚本（检测 Kaku，创建软链接）
+├── install.sh              # 主安装脚本（Homebrew、Oh My Zsh、Volta、Bun、pnpm、SDKMAN）
 ├── Brewfile                # Homebrew 软件清单
+├── Makefile                # 测试命令入口（make test-all）
+├── Dockerfile              # Docker 测试环境（Ubuntu 24.04 + Homebrew）
 ├── dotfiles/
 │   ├── dev-setup.zsh      # 统一环境配置（通过 source 加载）
 │   ├── .gitconfig         # Git 配置（软链接到 ~/.gitconfig）
 │   └── starship.toml      # Starship 配置（软链接到 ~/.config/starship.toml）
+├── scripts/
+│   ├── test-install.sh    # 集成测试（支持 --with-kaku 参数）
+│   └── test-idempotent.sh # 幂等性测试
 └── docs/
-    └── zsh-optimization.md # Kaku 集成优化说明
+    ├── zsh-optimization.md # Kaku 集成优化说明
+    └── testing.md          # 测试架构文档
 ```
 
 ## 语言约定
