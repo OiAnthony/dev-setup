@@ -69,9 +69,11 @@ ln -sf "$SCRIPT_DIR/dotfiles/starship.toml" ~/.config/starship.toml
 # 追加 source 到 ~/.zshrc
 DEV_SETUP_SOURCE="source \"$SCRIPT_DIR/dotfiles/dev-setup.zsh\""
 if [[ -f ~/.zshrc ]] && ! grep -q "dev-setup.zsh" ~/.zshrc; then
-  echo "" >> ~/.zshrc
-  echo "# Dev Setup Environment" >> ~/.zshrc
-  echo "$DEV_SETUP_SOURCE" >> ~/.zshrc
+  {
+    echo ""
+    echo "# Dev Setup Environment"
+    echo "$DEV_SETUP_SOURCE"
+  } >> ~/.zshrc
   echo "✅ 已追加配置到 ~/.zshrc"
 elif [[ ! -f ~/.zshrc ]]; then
   echo "$DEV_SETUP_SOURCE" > ~/.zshrc

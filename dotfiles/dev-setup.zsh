@@ -21,8 +21,9 @@ eval "$(/opt/homebrew/bin/brew shellenv)"
 
 # =========== 别名 ===========
 
-command -v podman &> /dev/null && alias docker="podman"
-command -v code-insiders &> /dev/null && alias code="code-insiders"
+# 使用 Zsh 内置 hash 表检测（更快）
+(( $+commands[podman] )) && alias docker="podman"
+(( $+commands[code-insiders] )) && alias code="code-insiders"
 alias python="python3"
 alias pip="pip3"
 alias cc="claude"
@@ -30,8 +31,19 @@ alias oc="opencode"
 
 # =========== CLI 工具 ===========
 
-# fzf
-source <(fzf --zsh)
+# 清理所有缓存文件的辅助函数
+dev-setup-clear-cache() {
+  rm -f ~/.fzf.zsh ~/.zoxide.zsh ~/.starship.zsh
+  echo "✓ 缓存已清理,请重新加载 shell: source ~/.zshrc"
+}
+
+# fzf - 使用缓存文件避免每次执行进程替换（1天自动刷新）
+if command -v fzf &> /dev/null; then
+  if [[ ! -f ~/.fzf.zsh ]] || [[ -n $(find ~/.fzf.zsh -mtime +1 2>/dev/null) ]]; then
+    fzf --zsh > ~/.fzf.zsh
+  fi
+  source ~/.fzf.zsh
+fi
 
 fzf-cd() {
   local dir
@@ -39,8 +51,13 @@ fzf-cd() {
   [[ -n $dir ]] && cd "$dir"
 }
 
-# zoxide
-eval "$(zoxide init zsh)"
+# zoxide - 使用缓存文件避免每次 eval（1天自动刷新）
+if command -v zoxide &> /dev/null; then
+  if [[ ! -f ~/.zoxide.zsh ]] || [[ -n $(find ~/.zoxide.zsh -mtime +1 2>/dev/null) ]]; then
+    zoxide init zsh > ~/.zoxide.zsh
+  fi
+  source ~/.zoxide.zsh
+fi
 
 # yazi（支持 cd 跟随）
 function y() {
@@ -51,31 +68,39 @@ function y() {
 	rm -f -- "$tmp"
 }
 
-# thefuck
-eval $(thefuck --alias)
+# thefuck - 懒加载（仅在首次使用时初始化）
+fuck() {
+  unfunction fuck
+  eval $(thefuck --alias)
+  fuck "$@"
+}
 
 # =========== 包管理器 ===========
 
-# pnpm
-export PNPM_HOME="$HOME/Library/pnpm"
-case ":$PATH:" in
-  *":$PNPM_HOME:"*) ;;
-  *) export PATH="$PNPM_HOME:$PATH" ;;
-esac
+# pnpm - 优先使用环境变量，fallback 到默认路径
+export PNPM_HOME="${PNPM_HOME:-$HOME/Library/pnpm}"
+typeset -U PATH path
+path=($PNPM_HOME $path)
+export PATH
 
-# bun
-[ -s "$HOME/.bun/_bun" ] && source "$HOME/.bun/_bun"
-export BUN_INSTALL="$HOME/.bun"
+# bun - 优先使用环境变量，fallback 到默认路径，跳过补全脚本
+export BUN_INSTALL="${BUN_INSTALL:-$HOME/.bun}"
 export PATH="$BUN_INSTALL/bin:$PATH"
 
-# SDKMAN
-export SDKMAN_DIR="$HOME/.sdkman"
-[[ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]] && source "$HOME/.sdkman/bin/sdkman-init.sh"
+# SDKMAN - 懒加载（仅在首次使用 sdk 命令时初始化）
+export SDKMAN_DIR="${SDKMAN_DIR:-$HOME/.sdkman}"
+sdk() {
+  unfunction sdk
+  [[ -s "$SDKMAN_DIR/bin/sdkman-init.sh" ]] && source "$SDKMAN_DIR/bin/sdkman-init.sh"
+  sdk "$@"
+}
 
 # =========== 开发环境 ===========
 
-# Go
-export PATH=$PATH:$(go env GOPATH)/bin
+# Go - 优先使用 GOPATH 环境变量，fallback 到默认路径
+if command -v go &> /dev/null; then
+  export PATH=$PATH:${GOPATH:-$HOME/go}/bin
+fi
 
 # Android SDK（完整 Android 开发环境才需要）
 # export ANDROID_HOME=$HOME/Library/Android/sdk
@@ -93,7 +118,13 @@ export OPENCODE_EXPERIMENTAL_LSP_TOOL=1
 if [[ -f "$HOME/.config/kaku/zsh/kaku.zsh" ]]; then
   source "$HOME/.config/kaku/zsh/kaku.zsh"
 else
-  command -v starship &> /dev/null && eval "$(starship init zsh)"
+  # Starship - 使用缓存文件避免每次 eval（1天自动刷新）
+  if (( $+commands[starship] )); then
+    if [[ ! -f ~/.starship.zsh ]] || [[ -n $(find ~/.starship.zsh -mtime +1 2>/dev/null) ]]; then
+      starship init zsh > ~/.starship.zsh
+    fi
+    source ~/.starship.zsh
+  fi
 
   export CLICOLOR=1
   export LSCOLORS="Gxfxcxdxbxegedabagacad"
