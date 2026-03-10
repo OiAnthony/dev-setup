@@ -17,6 +17,33 @@ source $ZSH/oh-my-zsh.sh
 
 # =========== Homebrew ===========
 
+# 中国大陆镜像加速（通过 DEV_SETUP_CHINA_MIRROR=1/0 覆盖，或自动网络探测）
+_dev_setup_is_china() {
+  [[ "$DEV_SETUP_CHINA_MIRROR" == "1" ]] && return 0
+  [[ "$DEV_SETUP_CHINA_MIRROR" == "0" ]] && return 1
+
+  local cache_file="$HOME/.cache/dev-setup-china-mirror"
+  if [[ -f "$cache_file" ]] && [[ -z $(find "$cache_file" -mtime +1 2>/dev/null) ]]; then
+    [[ "$(cat "$cache_file")" == "CN" ]] && return 0 || return 1
+  fi
+
+  local country
+  country=$(curl -s --max-time 2 https://ipinfo.io/country 2>/dev/null | tr -d '[:space:]')
+  [[ -z "$country" ]] && country=$(curl -s --max-time 2 http://ip-api.com/line/?fields=countryCode 2>/dev/null | tr -d '[:space:]')
+
+  mkdir -p "$(dirname "$cache_file")"
+  echo "${country:-UNKNOWN}" > "$cache_file"
+  [[ "$country" == "CN" ]] && return 0
+  return 1
+}
+
+if _dev_setup_is_china; then
+  export HOMEBREW_API_DOMAIN="https://mirrors.ustc.edu.cn/homebrew-bottles/api"
+  export HOMEBREW_BOTTLE_DOMAIN="https://mirrors.ustc.edu.cn/homebrew-bottles"
+  export HOMEBREW_BREW_GIT_REMOTE="https://mirrors.ustc.edu.cn/brew.git"
+  export HOMEBREW_CORE_GIT_REMOTE="https://mirrors.ustc.edu.cn/homebrew-core.git"
+fi
+
 eval "$(/opt/homebrew/bin/brew shellenv)"
 
 # =========== 别名 ===========

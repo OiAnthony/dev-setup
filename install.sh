@@ -5,6 +5,32 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 echo "🚀 开始安装开发环境..."
 
+# 中国大陆镜像加速
+_dev_setup_is_china() {
+  [[ "$DEV_SETUP_CHINA_MIRROR" == "1" ]] && return 0
+  [[ "$DEV_SETUP_CHINA_MIRROR" == "0" ]] && return 1
+
+  local country
+  country=$(curl -s --max-time 2 https://ipinfo.io/country 2>/dev/null | tr -d '[:space:]')
+  [[ -z "$country" ]] && country=$(curl -s --max-time 2 http://ip-api.com/line/?fields=countryCode 2>/dev/null | tr -d '[:space:]')
+
+  # 同时写入缓存供 dev-setup.zsh 使用
+  local cache_file="$HOME/.cache/dev-setup-china-mirror"
+  mkdir -p "$(dirname "$cache_file")"
+  echo "${country:-UNKNOWN}" > "$cache_file"
+
+  [[ "$country" == "CN" ]] && return 0
+  return 1
+}
+
+if _dev_setup_is_china; then
+  echo "🇨🇳 检测到中国大陆网络，使用 USTC 镜像加速..."
+  export HOMEBREW_API_DOMAIN="https://mirrors.ustc.edu.cn/homebrew-bottles/api"
+  export HOMEBREW_BOTTLE_DOMAIN="https://mirrors.ustc.edu.cn/homebrew-bottles"
+  export HOMEBREW_BREW_GIT_REMOTE="https://mirrors.ustc.edu.cn/brew.git"
+  export HOMEBREW_CORE_GIT_REMOTE="https://mirrors.ustc.edu.cn/homebrew-core.git"
+fi
+
 # 检测并安装 Homebrew
 if ! command -v brew &> /dev/null; then
   echo "📦 安装 Homebrew..."
