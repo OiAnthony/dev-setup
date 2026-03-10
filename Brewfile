@@ -28,7 +28,7 @@ brew "tree"
 brew "jq"
 
 # 容器工具
-# brew "podman"  # 可选：Docker 替代品
+# brew "podman"  # 可选：Docker 替代品，Podman 免费版可商用、Docker Desktop 和 OrbStack 需要付费版才支持商用
 
 # Python 包管理
 brew "uv"

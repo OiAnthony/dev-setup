@@ -3,30 +3,46 @@
 # ============================================================================
 # 使用方式: 在 ~/.zshrc 中添加: source /path/to/dev-setup/dotfiles/dev-setup.zsh
 
-# PATH 配置
-export PATH=$HOME/.local/bin:$PATH
+# =========== 基础环境 ===========
 
-# Oh My Zsh 配置
+export PATH=$HOME/.local/bin:$PATH
+export EDITOR=nvim
+
+# =========== Shell 框架 ===========
+
 export ZSH="$HOME/.oh-my-zsh"
 ZSH_THEME=""
 plugins=(git npm node docker python docker-compose)
 source $ZSH/oh-my-zsh.sh
 
-# 别名
-alias docker="podman"
-alias code="code-insiders"
+# =========== Homebrew ===========
+
+eval "$(/opt/homebrew/bin/brew shellenv)"
+
+# =========== 别名 ===========
+
+command -v podman &> /dev/null && alias docker="podman"
+command -v code-insiders &> /dev/null && alias code="code-insiders"
 alias python="python3"
 alias pip="pip3"
+alias cc="claude"
 alias oc="opencode"
+
+# =========== CLI 工具 ===========
 
 # fzf
 source <(fzf --zsh)
 
+fzf-cd() {
+  local dir
+  dir=$(fd --type directory "${1:-.}" | fzf --preview 'ls -la {} | head -20')
+  [[ -n $dir ]] && cd "$dir"
+}
+
 # zoxide
 eval "$(zoxide init zsh)"
 
-# yazi
-export EDITOR=nvim
+# yazi（支持 cd 跟随）
 function y() {
 	local tmp="$(mktemp -t "yazi-cwd.XXXXXX")" cwd
 	command yazi "$@" --cwd-file="$tmp"
@@ -35,8 +51,13 @@ function y() {
 	rm -f -- "$tmp"
 }
 
+# thefuck
+eval $(thefuck --alias)
+
+# =========== 包管理器 ===========
+
 # pnpm
-export PNPM_HOME="/Users/anthony/Library/pnpm"
+export PNPM_HOME="$HOME/Library/pnpm"
 case ":$PATH:" in
   *":$PNPM_HOME:"*) ;;
   *) export PATH="$PNPM_HOME:$PATH" ;;
@@ -51,37 +72,24 @@ export PATH="$BUN_INSTALL/bin:$PATH"
 export SDKMAN_DIR="$HOME/.sdkman"
 [[ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]] && source "$HOME/.sdkman/bin/sdkman-init.sh"
 
-# Windsurf
-export PATH="$HOME/.codeium/windsurf/bin:$PATH"
-
-# Homebrew
-eval "$(/opt/homebrew/bin/brew shellenv)"
-
-# fzf-cd 函数
-fzf-cd() {
-  local dir
-  dir=$(fd --type directory "${1:-.}" | fzf --preview 'ls -la {} | head -20')
-  [[ -n $dir ]] && cd "$dir"
-}
-
-# Android SDK
-export ANDROID_HOME=$HOME/Library/Android/sdk
-export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin
-export PATH=$PATH:$ANDROID_HOME/platform-tools
-export PATH=$PATH:$ANDROID_HOME/build-tools/36.1.0
-
-# thefuck
-eval $(thefuck --alias)
+# =========== 开发环境 ===========
 
 # Go
 export PATH=$PATH:$(go env GOPATH)/bin
+
+# Android SDK（完整 Android 开发环境才需要）
+# export ANDROID_HOME=$HOME/Library/Android/sdk
+# export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin
+# export PATH=$PATH:$ANDROID_HOME/platform-tools
+# export PATH=$PATH:$ANDROID_HOME/build-tools/36.1.0
 
 # OpenCode
 export OPENCODE_EXPERIMENTAL_MARKDOWN=1
 export OPENCODE_EXPERIMENTAL_LSP_TY=1
 export OPENCODE_EXPERIMENTAL_LSP_TOOL=1
 
-# Kaku Shell Integration
+# =========== Kaku 集成（或 Fallback） ===========
+
 if [[ -f "$HOME/.config/kaku/zsh/kaku.zsh" ]]; then
   source "$HOME/.config/kaku/zsh/kaku.zsh"
 else

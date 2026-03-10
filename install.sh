@@ -10,12 +10,22 @@ if ! command -v brew &> /dev/null; then
   echo "📦 安装 Homebrew..."
   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
+  # macOS Apple Silicon 需要添加到 PATH
+  if [[ -f "/opt/homebrew/bin/brew" ]]; then
+    eval "$(/opt/homebrew/bin/brew shellenv)"
   # Linux 需要添加到 PATH
-  if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+  elif [[ -f "/home/linuxbrew/.linuxbrew/bin/brew" ]]; then
     eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
   fi
 else
   echo "✅ Homebrew 已安装"
+fi
+
+# 校验 brew 是否可用，后续流程完全依赖 brew
+if ! command -v brew &> /dev/null; then
+  echo "❌ Homebrew 安装失败或不在 PATH 中，无法继续安装。"
+  echo "请参考 https://brew.sh 手动安装后重新运行此脚本。"
+  exit 1
 fi
 
 # 安装所有软件
