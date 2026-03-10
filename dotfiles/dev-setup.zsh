@@ -77,6 +77,10 @@ fuck() {
 
 # =========== 包管理器 ===========
 
+# Volta - Node.js 版本管理器
+export VOLTA_HOME="${VOLTA_HOME:-$HOME/.volta}"
+export PATH="$VOLTA_HOME/bin:$PATH"
+
 # pnpm - 优先使用环境变量，fallback 到默认路径
 export PNPM_HOME="${PNPM_HOME:-$HOME/Library/pnpm}"
 typeset -U PATH path

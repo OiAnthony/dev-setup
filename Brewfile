@@ -3,10 +3,10 @@ brew "git"
 brew "gh"
 brew "git-delta"
 brew "lazygit"
-brew "gitsu"
+# tap "matsuyoshi30/gitsu"
+# brew "gitsu"  # 可选：Git 用户切换工具，需要手动安装: brew install matsuyoshi30/gitsu/gitsu
 
 # 编程语言
-brew "node"
 brew "python@3.14"
 brew "go"
 

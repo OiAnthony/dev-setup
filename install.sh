@@ -82,6 +82,18 @@ else
   echo "✅ ~/.zshrc 已包含 dev-setup 配置"
 fi
 
+# 安装 Volta（Node.js 版本管理器）
+if [[ ! -d "$HOME/.volta" ]]; then
+  echo "📦 安装 Volta..."
+  curl https://get.volta.sh | bash
+  export VOLTA_HOME="$HOME/.volta"
+  export PATH="$VOLTA_HOME/bin:$PATH"
+  echo "📦 通过 Volta 安装 Node.js..."
+  volta install node
+else
+  echo "✅ Volta 已安装"
+fi
+
 # 可选工具安装
 echo ""
 echo "📦 可选工具安装"
