@@ -1,7 +1,3 @@
-[user]
-	name = Your Name  # 请修改为你的名字
-	email = your.email@example.com  # 请修改为你的邮箱
-
 [core]
 	editor = vim
 	pager = delta

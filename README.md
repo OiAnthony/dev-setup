@@ -7,13 +7,13 @@
 ### 一键安装（推荐）
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/你的用户名/dev-setup/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/OiAnthony/dev-setup/main/install.sh | bash
 ```
 
 ### 克隆后安装
 
 ```bash
-git clone https://github.com/你的用户名/dev-setup.git
+git clone https://github.com/OiAnthony/dev-setup.git
 cd dev-setup
 chmod +x install.sh
 ./install.sh

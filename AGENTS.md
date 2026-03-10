@@ -121,11 +121,6 @@ git commit -m "chore: update configuration"
 - **注释可选工具**：如 `# brew "podman"` 需用户手动取消注释
 - **同步命令**：修改后运行 `brew bundle dump --force` 覆盖
 
-### 修改 .gitconfig
-
-- **占位符**：保留 `Your Name` 和 `your.email@example.com` 提示用户修改
-- **delta 配置**：`side-by-side = true` 依赖终端宽度，窄屏用户可能需调整
-
 ## 常见问题
 
 ### Zsh 启动慢
