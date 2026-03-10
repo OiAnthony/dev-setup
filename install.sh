@@ -1,10 +1,40 @@
 #!/bin/bash
 set -e
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 CURRENT_OS="$(uname -s)"
+SCRIPT_DIR="$(cd "$(dirname "$0")" 2>/dev/null && pwd)"
 
 echo "🚀 开始安装开发环境..."
+
+# 检测 SCRIPT_DIR 是否为目标仓库（包含 Brewfile 和 dotfiles）
+# 覆盖 curl | bash、cat install.sh | bash、bash install.sh 等场景
+if [[ ! -f "$SCRIPT_DIR/Brewfile" ]] || [[ ! -d "$SCRIPT_DIR/dotfiles" ]]; then
+  echo "📥 检测到脚本不在仓库目录中，正在克隆仓库..."
+  REPO_URL="https://github.com/OiAnthony/dev-setup.git"
+  INSTALL_DIR="$HOME/.dev-setup"
+
+  if [[ -d "$INSTALL_DIR/.git" ]]; then
+    echo "✅ 仓库已存在，更新到最新版本..."
+    cd "$INSTALL_DIR"
+
+    # 验证是否为目标仓库（兼容 HTTPS 和 SSH remote）
+    REMOTE_URL=$(git remote get-url origin 2>/dev/null || echo "")
+    if [[ "$REMOTE_URL" =~ (https://github\.com/|git@github\.com:)OiAnthony/dev-setup(\.git)?$ ]]; then
+      git pull origin main
+    else
+      echo "⚠️  $INSTALL_DIR 不是目标仓库，跳过更新"
+      echo "   当前 remote: $REMOTE_URL"
+      echo "   预期 remote: https://github.com/OiAnthony/dev-setup.git 或 git@github.com:OiAnthony/dev-setup.git"
+      exit 1
+    fi
+  else
+    git clone "$REPO_URL" "$INSTALL_DIR"
+    cd "$INSTALL_DIR"
+  fi
+
+  # 重新执行脚本（此时 SCRIPT_DIR 指向仓库目录）
+  exec bash "$INSTALL_DIR/install.sh"
+fi
 
 # Homebrew 要求使用非 root 用户安装，提前阻止错误场景
 if [[ "$EUID" -eq 0 ]]; then
