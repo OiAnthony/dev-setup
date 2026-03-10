@@ -68,6 +68,30 @@ if [[ "$EUID" -eq 0 ]]; then
   exit 1
 fi
 
+# 配置 Zsh 为默认 Shell（提前执行，确保后续步骤在 Zsh 环境下进行）
+CURRENT_SHELL="$(basename "$SHELL")"
+if [[ "$CURRENT_SHELL" != "zsh" ]]; then
+  echo "🐚 配置 Zsh 为默认 Shell..."
+  ZSH_PATH="$(command -v zsh)"
+
+  if [[ -z "$ZSH_PATH" ]]; then
+    echo "❌ 未找到 zsh，请确认系统已预装或稍后通过 Homebrew 安装。"
+    echo "   将在安装 Homebrew 后重新检查..."
+  else
+    # 确保 zsh 路径在 /etc/shells 中
+    if ! grep -qxF "$ZSH_PATH" /etc/shells; then
+      echo "📝 将 $ZSH_PATH 添加到 /etc/shells..."
+      echo "$ZSH_PATH" | sudo tee -a /etc/shells >/dev/null
+    fi
+
+    chsh -s "$ZSH_PATH"
+    echo "✅ 默认 Shell 已切换为 $ZSH_PATH"
+    echo "⚠️  请注意：Shell 切换将在下次登录时生效"
+  fi
+else
+  echo "✅ Zsh 已是默认 Shell"
+fi
+
 # 中国大陆镜像加速
 _dev_setup_is_china() {
   [[ "$DEV_SETUP_CHINA_MIRROR" == "1" ]] && return 0
@@ -138,29 +162,6 @@ if brew bundle check --file="$SCRIPT_DIR/Brewfile" &>/dev/null; then
   echo "✅ 所有 Brewfile 包已安装"
 else
   brew bundle --file="$SCRIPT_DIR/Brewfile"
-fi
-
-# 配置 Zsh 为默认 Shell
-CURRENT_SHELL="$(basename "$SHELL")"
-if [[ "$CURRENT_SHELL" != "zsh" ]]; then
-  echo "🐚 配置 Zsh 为默认 Shell..."
-  ZSH_PATH="$(command -v zsh)"
-
-  if [[ -z "$ZSH_PATH" ]]; then
-    echo "❌ 未找到 zsh，请确认 Brewfile 中包含 zsh 或系统已预装。"
-    exit 1
-  fi
-
-  # 确保 zsh 路径在 /etc/shells 中
-  if ! grep -qxF "$ZSH_PATH" /etc/shells; then
-    echo "📝 将 $ZSH_PATH 添加到 /etc/shells..."
-    echo "$ZSH_PATH" | sudo tee -a /etc/shells >/dev/null
-  fi
-
-  chsh -s "$ZSH_PATH"
-  echo "✅ 默认 Shell 已切换为 $ZSH_PATH"
-else
-  echo "✅ Zsh 已是默认 Shell"
 fi
 
 # 安装 Oh My Zsh
@@ -254,5 +255,14 @@ echo "✨ 安装完成！"
 echo ""
 echo "📝 后续步骤："
 echo "1. 修改 ~/.gitconfig 中的用户名和邮箱"
-echo "2. 运行 'source ~/.zshrc' 或重启终端"
-echo "3. (可选) 取消注释 ~/.zshrc 中的 Starship 配置以启用自定义提示符"
+echo "2. (可选) 取消注释 ~/.zshrc 中的 Starship 配置以启用自定义提示符"
+echo ""
+
+# 如果当前 shell 不是 zsh，提示切换
+if [[ "$(basename "$SHELL")" != "zsh" ]]; then
+  echo "🔄 检测到默认 Shell 已切换为 zsh，正在启动 zsh..."
+  echo "   (如需返回原 shell，请运行 'exit')"
+  echo ""
+  sleep 1
+  exec zsh -l
+fi
