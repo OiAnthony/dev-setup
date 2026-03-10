@@ -107,7 +107,7 @@ if ! command -v brew &> /dev/null; then
     echo ""
     echo "然后重新运行此脚本，或者使用以下命令一次性完成："
     echo ""
-    echo "  sudo -v && ./install.sh"
+    echo "  sudo -v && \"$SCRIPT_DIR/install.sh\""
     echo ""
     exit 1
   fi
@@ -138,6 +138,29 @@ if brew bundle check --file="$SCRIPT_DIR/Brewfile" &>/dev/null; then
   echo "✅ 所有 Brewfile 包已安装"
 else
   brew bundle --file="$SCRIPT_DIR/Brewfile"
+fi
+
+# 配置 Zsh 为默认 Shell
+CURRENT_SHELL="$(basename "$SHELL")"
+if [[ "$CURRENT_SHELL" != "zsh" ]]; then
+  echo "🐚 配置 Zsh 为默认 Shell..."
+  ZSH_PATH="$(command -v zsh)"
+
+  if [[ -z "$ZSH_PATH" ]]; then
+    echo "❌ 未找到 zsh，请确认 Brewfile 中包含 zsh 或系统已预装。"
+    exit 1
+  fi
+
+  # 确保 zsh 路径在 /etc/shells 中
+  if ! grep -qxF "$ZSH_PATH" /etc/shells; then
+    echo "📝 将 $ZSH_PATH 添加到 /etc/shells..."
+    echo "$ZSH_PATH" | sudo tee -a /etc/shells >/dev/null
+  fi
+
+  chsh -s "$ZSH_PATH"
+  echo "✅ 默认 Shell 已切换为 $ZSH_PATH"
+else
+  echo "✅ Zsh 已是默认 Shell"
 fi
 
 # 安装 Oh My Zsh

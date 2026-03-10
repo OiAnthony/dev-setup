@@ -1,10 +1,11 @@
+tap "homebrew/cask"
+
 # 版本控制
 brew "git"
 brew "gh"
 brew "git-delta"
 brew "lazygit"
-tap "matsuyoshi30/gitsu"
-brew "gitsu"
+brew "matsuyoshi30/gitsu/gitsu"
 
 # 编程语言
 brew "python@3.14"
