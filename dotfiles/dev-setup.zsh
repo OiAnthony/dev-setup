@@ -44,7 +44,12 @@ if _dev_setup_is_china; then
   export HOMEBREW_CORE_GIT_REMOTE="https://mirrors.ustc.edu.cn/homebrew-core.git"
 fi
 
-eval "$(/opt/homebrew/bin/brew shellenv)"
+# 初始化 Homebrew 环境（兼容 macOS 和 Linux）
+if [[ -f "/opt/homebrew/bin/brew" ]]; then
+  eval "$(/opt/homebrew/bin/brew shellenv)"
+elif [[ -f "/home/linuxbrew/.linuxbrew/bin/brew" ]]; then
+  eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+fi
 
 # =========== 别名 ===========
 

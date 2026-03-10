@@ -122,28 +122,42 @@ fi
 if ! command -v brew &> /dev/null; then
   echo "📦 安装 Homebrew..."
 
-  # 在非交互式环境下，Homebrew 安装需要提前获取 sudo 权限
+  # 在非交互式环境下（如 curl | bash），stdin 被管道占用
+  # 需要通过 /dev/tty 获取 sudo 权限
   if [[ ! -t 0 ]]; then
-    echo "⚠️  检测到非交互式环境（stdin 不是 TTY）"
-    echo "Homebrew 安装需要 sudo 权限，请先运行以下命令获取权限："
-    echo ""
-    echo "  sudo -v"
-    echo ""
-    echo "然后重新运行此脚本，或者使用以下命令一次性完成："
-    echo ""
-    echo "  sudo -v && \"$SCRIPT_DIR/install.sh\""
-    echo ""
-    exit 1
+    echo "⚠️  检测到非交互式环境，尝试通过终端获取 sudo 权限..."
+    if [[ -e /dev/tty ]]; then
+      # 通过 /dev/tty 直接从终端读取密码
+      sudo -v < /dev/tty
+    elif sudo -n true 2>/dev/null; then
+      # 已有免密 sudo 或缓存的凭证
+      echo "✅ 已有 sudo 权限"
+    else
+      echo "❌ 无法获取 sudo 权限（无终端且无免密 sudo）"
+      echo "请先运行以下命令获取权限，然后重新执行安装："
+      echo ""
+      echo "  sudo -v && curl -fsSL https://raw.githubusercontent.com/OiAnthony/dev-setup/main/install.sh | bash"
+      echo ""
+      exit 1
+    fi
   fi
 
-  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
   # macOS Apple Silicon 需要添加到 PATH
   if [[ -f "/opt/homebrew/bin/brew" ]]; then
     eval "$(/opt/homebrew/bin/brew shellenv)"
+    # 持久化到 ~/.zshrc
+    if [[ -f ~/.zshrc ]] && ! grep -q "/opt/homebrew/bin/brew shellenv" ~/.zshrc; then
+      echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zshrc
+    fi
   # Linux 需要添加到 PATH
   elif [[ -f "/home/linuxbrew/.linuxbrew/bin/brew" ]]; then
     eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+    # 持久化到 ~/.zshrc
+    if [[ -f ~/.zshrc ]] && ! grep -q "/home/linuxbrew/.linuxbrew/bin/brew shellenv" ~/.zshrc; then
+      echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"' >> ~/.zshrc
+    fi
   fi
 else
   echo "✅ Homebrew 已安装"

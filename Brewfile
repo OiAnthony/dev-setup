@@ -3,7 +3,6 @@ brew "git"
 brew "gh"
 brew "git-delta"
 brew "lazygit"
-brew "matsuyoshi30/gitsu/gitsu"
 
 # 编程语言
 brew "python@3.14"
@@ -25,6 +24,8 @@ brew "vim"
 brew "neovim"
 brew "tree"
 brew "jq"
+brew "zip"
+brew "unzip"
 
 # 容器工具
 # brew "podman"  # 可选：Docker 替代品，Podman 免费版可商用、Docker Desktop 和 OrbStack 需要付费版才支持商用
