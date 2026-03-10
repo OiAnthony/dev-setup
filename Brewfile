@@ -1,5 +1,3 @@
-tap "homebrew/cask"
-
 # 版本控制
 brew "git"
 brew "gh"
