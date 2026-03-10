@@ -2,6 +2,7 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+CURRENT_OS="$(uname -s)"
 
 echo "🚀 开始安装开发环境..."
 
@@ -11,23 +12,29 @@ if [[ "$EUID" -eq 0 ]]; then
   echo ""
   echo "请先创建一个普通用户，再切换到该用户后重新运行此脚本。"
   echo ""
-  echo "macOS 示例（图形界面）："
-  echo "  1. 打开 系统设置 > 用户与群组"
-  echo "  2. 点击 添加用户"
-  echo "  3. 选择 标准 或 管理员 账户类型"
-  echo "  4. 使用新用户登录后执行: ./install.sh"
-  echo ""
-  echo "macOS 示例（终端）："
-  echo "  sudo sysadminctl -addUser <username> -fullName \"<Full Name>\" -password -"
-  echo "  sudo dseditgroup -o edit -a <username> -t user admin   # 如需管理员权限"
-  echo "  su - <username>"
-  echo "  cd \"$(printf '%s' "$SCRIPT_DIR")\" && ./install.sh"
-  echo ""
-  echo "Linux 示例："
-  echo "  sudo adduser <username>"
-  echo "  sudo usermod -aG sudo <username>    # 如需 sudo 权限"
-  echo "  su - <username>"
-  echo "  cd \"$(printf '%s' "$SCRIPT_DIR")\" && ./install.sh"
+  if [[ "$CURRENT_OS" == "Darwin" ]]; then
+    echo "macOS 示例（图形界面）："
+    echo "  1. 打开 系统设置 > 用户与群组"
+    echo "  2. 点击 添加用户"
+    echo "  3. 选择 标准 或 管理员 账户类型"
+    echo "  4. 使用新用户登录后执行: ./install.sh"
+    echo ""
+    echo "macOS 示例（终端）："
+    echo "  sudo sysadminctl -addUser <username> -fullName \"<Full Name>\" -password -"
+    echo "  sudo dseditgroup -o edit -a <username> -t user admin   # 如需管理员权限"
+    echo "  su - <username>"
+    echo "  cd \"$(printf '%s' "$SCRIPT_DIR")\" && ./install.sh"
+  elif [[ "$CURRENT_OS" == "Linux" ]]; then
+    echo "Linux 示例："
+    echo "  sudo adduser <username>"
+    echo "  sudo usermod -aG sudo <username>    # 如需 sudo 权限"
+    echo "  su - <username>"
+    echo "  cd \"$(printf '%s' "$SCRIPT_DIR")\" && ./install.sh"
+  else
+    echo "当前系统: $CURRENT_OS"
+    echo "请创建一个普通用户并切换后，再回到当前目录执行:"
+    echo "  cd \"$(printf '%s' "$SCRIPT_DIR")\" && ./install.sh"
+  fi
   exit 1
 fi
 
