@@ -67,6 +67,21 @@ fi
 # 检测并安装 Homebrew
 if ! command -v brew &> /dev/null; then
   echo "📦 安装 Homebrew..."
+
+  # 在非交互式环境下，Homebrew 安装需要提前获取 sudo 权限
+  if [[ ! -t 0 ]]; then
+    echo "⚠️  检测到非交互式环境（stdin 不是 TTY）"
+    echo "Homebrew 安装需要 sudo 权限，请先运行以下命令获取权限："
+    echo ""
+    echo "  sudo -v"
+    echo ""
+    echo "然后重新运行此脚本，或者使用以下命令一次性完成："
+    echo ""
+    echo "  sudo -v && ./install.sh"
+    echo ""
+    exit 1
+  fi
+
   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
   # macOS Apple Silicon 需要添加到 PATH
