@@ -5,6 +5,32 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 echo "🚀 开始安装开发环境..."
 
+# Homebrew 要求使用非 root 用户安装，提前阻止错误场景
+if [[ "$EUID" -eq 0 ]]; then
+  echo "❌ 检测到当前正在以 root 用户运行。Homebrew 要求在非 root 用户下安装。"
+  echo ""
+  echo "请先创建一个普通用户，再切换到该用户后重新运行此脚本。"
+  echo ""
+  echo "macOS 示例（图形界面）："
+  echo "  1. 打开 系统设置 > 用户与群组"
+  echo "  2. 点击 添加用户"
+  echo "  3. 选择 标准 或 管理员 账户类型"
+  echo "  4. 使用新用户登录后执行: ./install.sh"
+  echo ""
+  echo "macOS 示例（终端）："
+  echo "  sudo sysadminctl -addUser <username> -fullName \"<Full Name>\" -password -"
+  echo "  sudo dseditgroup -o edit -a <username> -t user admin   # 如需管理员权限"
+  echo "  su - <username>"
+  echo "  cd \"$(printf '%s' "$SCRIPT_DIR")\" && ./install.sh"
+  echo ""
+  echo "Linux 示例："
+  echo "  sudo adduser <username>"
+  echo "  sudo usermod -aG sudo <username>    # 如需 sudo 权限"
+  echo "  su - <username>"
+  echo "  cd \"$(printf '%s' "$SCRIPT_DIR")\" && ./install.sh"
+  exit 1
+fi
+
 # 中国大陆镜像加速
 _dev_setup_is_china() {
   [[ "$DEV_SETUP_CHINA_MIRROR" == "1" ]] && return 0
