@@ -14,9 +14,3 @@ format = "$symbol"
 
 [line_break]
 disabled = true
-
-[nodejs]
-disabled = true
-
-[lua]
-disabled = true

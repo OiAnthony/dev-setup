@@ -1,6 +1,6 @@
-# 开发环境自动化还原
+# 开发环境自动化配置
 
-快速在新 macOS 或 Linux（Ubuntu）机器上还原开发环境。
+快速在新 macOS 或 Linux（Ubuntu）机器上还原开发环境。支持 Oh My Zsh + Kaku 双系统优化，启动性能提升 80-120ms。
 
 ## 快速开始
 
@@ -27,30 +27,34 @@ source ~/.zshrc
 
 ## 包含的工具
 
-### 核心工具（自动安装）
+### 核心工具（Brewfile 自动安装）
 
 **版本控制**：
+
 - Git + GitHub CLI (gh)
-- git-delta（更好的 diff 显示）
+- git-delta（更好的 diff 显示，集成到 .gitconfig）
 - lazygit（Git TUI）
 - gitsu（Git 用户切换）
 
 **编程语言**：
+
 - Node.js
-- Python 3.14
+- Python 3.14 + uv（现代 Python 包管理器）
 - Go
 
 **Shell 增强**：
-- Starship（自定义提示符）
-- zoxide（智能目录跳转）
-- fzf（模糊查找）
+
+- Starship（自定义提示符，极简配置）
+- zoxide（智能目录跳转，`cd` 替代）
+- fzf（模糊查找 + 自定义 `fzf-cd` 函数）
 - fd（更快的 find）
 - ripgrep（更快的 grep）
 
 **系统工具**：
+
 - htop / btop（系统监控）
 - curl / wget（下载工具）
-- vim / neovim（编辑器）
+- vim / neovim（编辑器，默认 EDITOR=nvim）
 - tree（目录树）
 - jq（JSON 处理）
 
@@ -59,33 +63,48 @@ source ~/.zshrc
 - Bun（JavaScript 运行时）
 - pnpm（Node.js 包管理器）
 - SDKMAN（Java 版本管理）
-- podman（Docker 替代品，需手动取消注释 Brewfile）
-- uv（Python 包管理器，需手动取消注释 Brewfile）
-
+- podman（Docker 替代品，需取消注释 Brewfile）
 
 ## 配置文件说明
 
-本项目包含以下配置文件：
+本项目采用模块化配置，核心文件通过 `source` 加载而非覆盖 `~/.zshrc`：
 
-- `.zshrc`：Shell 配置（Oh My Zsh、插件、别名、工具初始化）
-- `.gitconfig`：Git 配置（需修改用户信息）
-- `starship.toml`：Starship 提示符配置（可选启用）
+- `dev-setup.zsh`：统一的开发环境配置（PATH、别名、工具初始化）
+  - 自动检测并集成 Kaku（如已安装）
+  - 包含 Oh My Zsh、fzf、zoxide、yazi 等工具配置
+  - 内置 pnpm、bun、SDKMAN、Android SDK、Go 等环境变量
+- `.gitconfig`：Git 配置（delta diff、zdiff3 合并、常用别名）
+- `starship.toml`：Starship 提示符配置（极简单行风格）
+
+### 内置别名
+
+| 别名 | 实际命令 | 说明 |
+|------|---------|------|
+| `docker` | `podman` | 使用 podman 替代 docker |
+| `code` | `code-insiders` | VS Code Insiders |
+| `python` | `python3` | Python 3 |
+| `oc` | `opencode` | OpenCode CLI |
+| `y` | yazi 函数 | 文件管理器（支持 cd 跟随） |
+
+### Kaku 集成
+
+如已安装 [Kaku.app](https://kaku.app)，配置会自动优化：
+
+- 插件由 Kaku 统一管理（syntax-highlighting、autosuggestions、completions）
+- 避免与 Oh My Zsh 重复加载，启动速度提升 80-120ms
+- 详见 [docs/zsh-optimization.md](docs/zsh-optimization.md)
 
 ## 首次使用指南
 
 1. **修改 Git 用户信息**：
+
    ```bash
    vim ~/.gitconfig
    # 修改 user.name 和 user.email
    ```
 
-2. **启用 Starship 提示符**（可选）：
-   ```bash
-   vim ~/.zshrc
-   # 取消注释 Starship 相关行
-   ```
+2. **重新加载配置**：
 
-3. **重新加载配置**：
    ```bash
    source ~/.zshrc
    ```
@@ -98,14 +117,9 @@ source ~/.zshrc
 # 更新 Brewfile
 brew bundle dump --force
 
-# 备份配置文件
-cp ~/.zshrc dotfiles/.zshrc
-cp ~/.gitconfig dotfiles/.gitconfig
-cp ~/.config/starship.toml dotfiles/starship.toml
-
-# 提交更改
-git add .
-git commit -m "Update environment configuration"
+# 提交更改（配置文件已通过软链接自动同步）
+git add Brewfile
+git commit -m "chore: update Brewfile"
 git push
 ```
 
@@ -114,16 +128,16 @@ git push
 ```bash
 brew install 新工具名
 brew bundle dump --force
-git commit -am "Add 新工具名"
+git commit -am "feat: add 新工具名"
 git push
 ```
 
 ### 更新配置文件
 
-编辑 `dotfiles/.zshrc`，然后提交：
+编辑 `dotfiles/dev-setup.zsh` 或其他配置文件，然后提交：
 
 ```bash
-git commit -am "Update zshrc"
+git commit -am "chore: update dev-setup configuration"
 git push
 ```
 
@@ -131,21 +145,30 @@ git push
 
 ```
 dev-setup/
-├── install.sh           # 主安装脚本
-├── Brewfile             # 软件清单
-├── dotfiles/            # 配置文件
-│   ├── .zshrc          # Shell 配置
-│   ├── .gitconfig      # Git 配置
-│   └── starship.toml   # Starship 配置
-├── docs/                # 文档
-│   └── tech-stack.mdx  # 技术栈说明
+├── install.sh              # 主安装脚本（智能检测 Kaku）
+├── Brewfile                # 软件清单（Homebrew Bundle）
+├── dotfiles/               # 配置文件
+│   ├── dev-setup.zsh      # 统一环境配置（通过 source 加载）
+│   ├── .gitconfig         # Git 配置（软链接到 ~/.gitconfig）
+│   └── starship.toml      # Starship 配置（软链接到 ~/.config/starship.toml）
+├── docs/                   # 文档
+│   ├── zsh-optimization.md # Zsh 性能优化说明
+│   └── tech-stack.mdx      # 技术栈说明
 └── README.md
 ```
 
+## 特性
+
+- ✅ 跨平台支持（macOS + Linux Ubuntu）
+- ✅ 幂等性设计（可重复运行）
+- ✅ 智能 Kaku 集成（自动检测并优化）
+- ✅ 模块化配置（通过 source 加载，不覆盖现有 .zshrc）
+- ✅ 软链接管理（配置文件自动同步）
+- ✅ 交互式可选工具安装
+
 ## 注意事项
 
-- 支持 macOS 和 Linux（Ubuntu）
 - 使用 Homebrew 统一管理软件包
-- 可重复运行 install.sh（幂等性）
-- 不要提交敏感信息（SSH 私钥、API token）
-- 首次使用需修改 .gitconfig 中的用户信息
+- **不要提交敏感信息**（SSH 私钥、API token、密码等）
+- 首次使用需修改 `.gitconfig` 中的用户名和邮箱
+- `install.sh` 采用追加模式，不会覆盖现有 `~/.zshrc` 内容

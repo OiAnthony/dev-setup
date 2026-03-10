@@ -31,4 +31,4 @@ brew "jq"
 # brew "podman"  # 可选：Docker 替代品
 
 # Python 包管理
-# brew "uv"  # 可选：快速 Python 包管理器
+brew "uv"

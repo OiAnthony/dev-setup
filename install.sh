@@ -30,28 +30,45 @@ else
   echo "✅ Oh My Zsh 已安装"
 fi
 
-# 安装 Zsh 插件
-echo "📦 安装 Zsh 插件..."
-ZSH_CUSTOM="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
+# 安装 Zsh 插件（如果使用 Kaku 则跳过）
+if [[ -f "$HOME/.config/kaku/zsh/kaku.zsh" ]]; then
+  echo "✅ 检测到 Kaku，跳过插件安装（由 Kaku 管理）"
+else
+  echo "📦 安装 Zsh 插件..."
+  ZSH_CUSTOM="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
 
-if [[ ! -d "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting" ]]; then
-  git clone https://github.com/zsh-users/zsh-syntax-highlighting.git "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting"
+  if [[ ! -d "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting" ]]; then
+    git clone https://github.com/zsh-users/zsh-syntax-highlighting.git "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting"
+  fi
+
+  if [[ ! -d "$ZSH_CUSTOM/plugins/zsh-autosuggestions" ]]; then
+    git clone https://github.com/zsh-users/zsh-autosuggestions.git "$ZSH_CUSTOM/plugins/zsh-autosuggestions"
+  fi
+
+  if [[ ! -d "$ZSH_CUSTOM/plugins/zsh-completions" ]]; then
+    git clone https://github.com/zsh-users/zsh-completions.git "$ZSH_CUSTOM/plugins/zsh-completions"
+  fi
 fi
 
-if [[ ! -d "$ZSH_CUSTOM/plugins/zsh-autosuggestions" ]]; then
-  git clone https://github.com/zsh-users/zsh-autosuggestions.git "$ZSH_CUSTOM/plugins/zsh-autosuggestions"
-fi
-
-if [[ ! -d "$ZSH_CUSTOM/plugins/zsh-completions" ]]; then
-  git clone https://github.com/zsh-users/zsh-completions.git "$ZSH_CUSTOM/plugins/zsh-completions"
-fi
-
-# 软链接配置文件
+# 配置文件
 echo "🔗 配置 dotfiles..."
-ln -sf "$SCRIPT_DIR/dotfiles/.zshrc" ~/.zshrc
 ln -sf "$SCRIPT_DIR/dotfiles/.gitconfig" ~/.gitconfig
 mkdir -p ~/.config
 ln -sf "$SCRIPT_DIR/dotfiles/starship.toml" ~/.config/starship.toml
+
+# 追加 source 到 ~/.zshrc
+DEV_SETUP_SOURCE="source \"$SCRIPT_DIR/dotfiles/dev-setup.zsh\""
+if [[ -f ~/.zshrc ]] && ! grep -q "dev-setup.zsh" ~/.zshrc; then
+  echo "" >> ~/.zshrc
+  echo "# Dev Setup Environment" >> ~/.zshrc
+  echo "$DEV_SETUP_SOURCE" >> ~/.zshrc
+  echo "✅ 已追加配置到 ~/.zshrc"
+elif [[ ! -f ~/.zshrc ]]; then
+  echo "$DEV_SETUP_SOURCE" > ~/.zshrc
+  echo "✅ 已创建 ~/.zshrc"
+else
+  echo "✅ ~/.zshrc 已包含 dev-setup 配置"
+fi
 
 # 可选工具安装
 echo ""
