@@ -30,7 +30,11 @@ fi
 
 # 安装所有软件
 echo "📦 安装软件包..."
-brew bundle --file="$SCRIPT_DIR/Brewfile"
+if brew bundle check --file="$SCRIPT_DIR/Brewfile" &>/dev/null; then
+  echo "✅ 所有 Brewfile 包已安装"
+else
+  brew bundle --file="$SCRIPT_DIR/Brewfile"
+fi
 
 # 安装 Oh My Zsh
 if [[ ! -d "$HOME/.oh-my-zsh" ]]; then
@@ -94,25 +98,28 @@ else
   echo "✅ Volta 已安装"
 fi
 
-# 可选工具安装
-echo ""
-echo "📦 可选工具安装"
-read -p "是否安装 Bun (JavaScript 运行时)? [y/N] " -n 1 -r
-echo
-if [[ $REPLY =~ ^[Yy]$ ]]; then
+# 安装 Bun
+if ! command -v bun &> /dev/null; then
+  echo "📦 安装 Bun..."
   curl -fsSL https://bun.sh/install | bash
+else
+  echo "✅ Bun 已安装"
 fi
 
-read -p "是否安装 pnpm (Node.js 包管理器)? [y/N] " -n 1 -r
-echo
-if [[ $REPLY =~ ^[Yy]$ ]]; then
+# 安装 pnpm
+if ! command -v pnpm &> /dev/null; then
+  echo "📦 安装 pnpm..."
   curl -fsSL https://get.pnpm.io/install.sh | sh -
+else
+  echo "✅ pnpm 已安装"
 fi
 
-read -p "是否安装 SDKMAN (Java 版本管理)? [y/N] " -n 1 -r
-echo
-if [[ $REPLY =~ ^[Yy]$ ]]; then
+# 安装 SDKMAN
+if [[ ! -d "$HOME/.sdkman" ]]; then
+  echo "📦 安装 SDKMAN..."
   curl -s "https://get.sdkman.io" | bash
+else
+  echo "✅ SDKMAN 已安装"
 fi
 
 echo ""
