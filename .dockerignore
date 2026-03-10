@@ -1,0 +1,28 @@
+# Git
+.git
+.gitignore
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# 备份文件
+*.bak
+*.backup
+*.swp
+*.swo
+*~
+
+# 临时文件
+*.tmp
+*.temp
+
+# 文档（不影响测试）
+docs/
+*.md
+!README.md
+
+# IDE
+.vscode
+.idea

@@ -166,6 +166,36 @@ dev-setup/
 - ✅ 软链接管理（配置文件自动同步）
 - ✅ 交互式可选工具安装
 
+## 测试
+
+项目包含自动化测试，验证安装脚本在干净环境下的正确性。
+
+### 本地测试
+
+```bash
+# 安装 ShellCheck（如果未安装）
+brew install shellcheck
+
+# 静态检查
+make lint
+
+# 运行所有测试（需要 Docker）
+make test-all
+
+# 单独运行测试
+make test              # 集成测试
+make test-kaku         # Kaku 路径测试
+make test-idempotent   # 幂等性测试
+```
+
+### CI/CD
+
+GitHub Actions 会在每次 push 或 PR 时自动运行：
+- ShellCheck 静态检查
+- Docker 容器集成测试
+- Kaku 检测逻辑验证
+- 幂等性验证
+
 ## 注意事项
 
 - 使用 Homebrew 统一管理软件包
