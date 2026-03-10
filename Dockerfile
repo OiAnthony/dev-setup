@@ -36,7 +36,12 @@ RUN /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/instal
 # 配置 Homebrew 环境变量
 ENV PATH="/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin:${PATH}"
 
-# 复制项目文件（最后执行，优化缓存）
+# === 关键优化：先复制 Brewfile，预安装包 ===
+COPY --chown=testuser:testuser Brewfile /home/testuser/dev-setup/Brewfile
+ENV HOMEBREW_NO_AUTO_UPDATE=1
+RUN brew bundle --file=/home/testuser/dev-setup/Brewfile || true
+
+# 复制项目文件（Brewfile 已缓存，其他文件变更不影响上层）
 COPY --chown=testuser:testuser . /home/testuser/dev-setup
 
 WORKDIR /home/testuser/dev-setup
