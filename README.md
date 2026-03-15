@@ -226,3 +226,7 @@ make test-idempotent   # 幂等性测试
 - **不要提交敏感信息**（SSH 私钥、API token、密码等）
 - 首次使用需修改 `.gitconfig` 中的用户名和邮箱
 - `install.sh` 采用追加模式，不会覆盖现有 `~/.zshrc` 内容
+
+## 致谢
+
+- [Kaku](https://github.com/tw93/Kaku) - Zsh 配置部分参考了该项目
