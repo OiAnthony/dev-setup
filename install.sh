@@ -272,11 +272,9 @@ echo "1. 修改 ~/.gitconfig 中的用户名和邮箱"
 echo "2. (可选) 取消注释 ~/.zshrc 中的 Starship 配置以启用自定义提示符"
 echo ""
 
-# 如果当前 shell 不是 zsh，提示切换
-if [[ "$(basename "$SHELL")" != "zsh" ]]; then
-  echo "🔄 检测到默认 Shell 已切换为 zsh，正在启动 zsh..."
-  echo "   (如需返回原 shell，请运行 'exit')"
-  echo ""
-  sleep 1
-  exec zsh -l
-fi
+# 自动激活新环境
+echo "🔄 正在激活新环境..."
+echo "   (如需返回原 shell，请运行 'exit')"
+echo ""
+sleep 1
+exec zsh -l
