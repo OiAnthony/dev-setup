@@ -56,6 +56,7 @@ fi
 # 使用 Zsh 内置 hash 表检测（更快）
 (( $+commands[podman] )) && alias docker="podman"
 (( $+commands[code-insiders] )) && alias code="code-insiders"
+(( $+commands[lazygit] )) && alias lg="lazygit"
 alias python="python3"
 alias pip="pip3"
 alias cc="claude"
