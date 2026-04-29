@@ -68,30 +68,24 @@ if [[ "$EUID" -eq 0 ]]; then
   exit 1
 fi
 
-# 包管理器命令前缀（root 不需要 sudo）
-SUDO=""
-if [[ "$EUID" -ne 0 ]]; then
-  SUDO="sudo"
-fi
-
 # Linux 下若缺少 zsh，使用系统包管理器安装
 _install_zsh_linux() {
   if command -v apt-get &>/dev/null; then
     echo "📦 使用 apt-get 安装 zsh..."
-    $SUDO apt-get update -y
-    $SUDO apt-get install -y zsh
+    sudo apt-get update -y
+    sudo apt-get install -y zsh
   elif command -v dnf &>/dev/null; then
     echo "📦 使用 dnf 安装 zsh..."
-    $SUDO dnf install -y zsh
+    sudo dnf install -y zsh
   elif command -v yum &>/dev/null; then
     echo "📦 使用 yum 安装 zsh..."
-    $SUDO yum install -y zsh
+    sudo yum install -y zsh
   elif command -v pacman &>/dev/null; then
     echo "📦 使用 pacman 安装 zsh..."
-    $SUDO pacman -Sy --noconfirm zsh
+    sudo pacman -Sy --noconfirm zsh
   elif command -v apk &>/dev/null; then
     echo "📦 使用 apk 安装 zsh..."
-    $SUDO apk add --no-cache zsh
+    sudo apk add --no-cache zsh
   else
     echo "❌ 未识别的 Linux 发行版包管理器，请手动安装 zsh 后重试。"
     return 1
@@ -119,7 +113,7 @@ if [[ "$CURRENT_SHELL" != "zsh" ]]; then
     # 确保 zsh 路径在 /etc/shells 中
     if ! grep -qxF "$ZSH_PATH" /etc/shells; then
       echo "📝 将 $ZSH_PATH 添加到 /etc/shells..."
-      echo "$ZSH_PATH" | $SUDO tee -a /etc/shells >/dev/null
+      echo "$ZSH_PATH" | sudo tee -a /etc/shells >/dev/null
     fi
 
     chsh -s "$ZSH_PATH"
@@ -161,8 +155,8 @@ if ! command -v brew &> /dev/null; then
   echo "📦 安装 Homebrew..."
 
   # 在非交互式环境下（如 curl | bash），stdin 被管道占用
-  # 需要通过 /dev/tty 获取 sudo 权限
-  if [[ ! -t 0 ]]; then
+  # 需要通过 /dev/tty 获取 sudo 权限（root 用户无需 sudo）
+  if [[ ! -t 0 ]] && [[ -n "sudo" ]]; then
     echo "⚠️  检测到非交互式环境，尝试通过终端获取 sudo 权限..."
     if [[ -e /dev/tty ]]; then
       # 通过 /dev/tty 直接从终端读取密码
