@@ -3,7 +3,7 @@ set -euo pipefail
 
 # 集成测试脚本：验证 install.sh 在干净环境下的安装结果
 # 同时覆盖：
-#   - macOS 路径（Homebrew + Brewfile） — 实际只在 mac runner 上执行
+#   - macOS 路径（Homebrew 本体 + mise + 字体脚本） — 实际只在 mac runner 上执行
 #   - Linux 普通用户路径（apt + mise）
 #   - Linux root 路径（apt + mise）
 
@@ -127,11 +127,32 @@ main() {
     os="$(uname -s)"
 
     if [[ "$os" == "Darwin" ]]; then
-        # macOS: Homebrew 包应直接在 PATH 中
-        log_info "Checking Homebrew packages (macOS)..."
-        for cmd in git gh node python3 go starship fzf fd rg jq nvim zoxide tree lazygit; do
-            check_command "$cmd" || ((failed++))
+        # macOS: Homebrew 本体保留但不再装 Brewfile；工具链由 mise 管理
+        log_info "Checking Homebrew binary (macOS)..."
+        check_command brew || ((failed++))
+
+        log_info "Checking mise binary..."
+        check_command mise || ((failed++))
+
+        log_info "Checking mise-managed tools..."
+        for tool in starship fzf zoxide fd rg gh lazygit delta nvim node go python java uv jq; do
+            check_via_mise "$tool" || ((failed++))
         done
+
+        log_info "Checking mise config symlink..."
+        check_symlink "$HOME/.config/mise/config.toml" "$PROJECT_ROOT/mise.toml" || ((failed++))
+
+        log_info "Checking macOS fonts..."
+        if ls "$HOME/Library/Fonts"/MapleMono-NF-CN-*.ttf >/dev/null 2>&1; then
+            log_info "✓ Maple Mono NF CN installed"
+        else
+            log_warn "⚠ Maple Mono NF CN not installed (network/release issue)"
+        fi
+        if ls "$HOME/Library/Fonts"/JetBrainsMonoNerdFont-*.ttf >/dev/null 2>&1; then
+            log_info "✓ JetBrains Mono Nerd Font installed"
+        else
+            log_warn "⚠ JetBrains Mono Nerd Font not installed (network/release issue)"
+        fi
     else
         # Linux: 基础工具来自 apt，开发 CLI 来自 mise（不一定在裸 PATH）
         log_info "Checking apt-installed base tools (Linux)..."
@@ -144,7 +165,7 @@ main() {
 
         log_info "Checking mise-managed tools..."
         # 仅检查关键工具；其余非关键工具（btop/yazi）在低速网络下可能未装完
-        for tool in starship fzf zoxide fd rg gh lazygit delta nvim node go python uv; do
+        for tool in starship fzf zoxide fd rg gh lazygit delta nvim node go python uv jq; do
             check_via_mise "$tool" || ((failed++))
         done
 
@@ -182,10 +203,6 @@ main() {
         log_info "✓ Bun installed"
     else
         log_warn "⚠ Bun not installed (optional)"
-    fi
-
-    if [[ "$os" == "Darwin" ]] && [[ -d "$HOME/.sdkman" ]]; then
-        log_info "✓ SDKMAN installed (macOS)"
     fi
 
     if command -v pnpm >/dev/null 2>&1; then

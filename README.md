@@ -1,10 +1,11 @@
 # 开发环境自动化配置
 
-快速在新 macOS 或 Linux（Ubuntu/Debian/Fedora/Alpine 等）机器上还原开发环境。支持 Oh My Zsh + Kaku 双系统优化，启动性能提升 80-120ms。中国大陆网络自动切换 USTC 镜像加速（macOS）。
+快速在新 macOS 或 Linux（Ubuntu/Debian/Fedora/Alpine 等）机器上还原开发环境。支持 Oh My Zsh + Kaku 双系统优化，启动性能提升 80-120ms。中国大陆网络自动切换 USTC 镜像加速（macOS Homebrew 本体）。
 
 > **平台策略**
-> - **macOS**：使用 Homebrew + `Brewfile` 安装所有 CLI 工具，配合 Volta、SDKMAN 管理运行时。
-> - **Linux（含 root）**：使用系统包管理器（apt/dnf/apk）安装基础工具，使用 [mise](https://mise.jdx.dev) 通过 `mise.toml` 安装开发 CLI 与运行时（Node/Go/Python/Java）。**Homebrew 在 root 下不可用**，因此 Linux 路径不依赖 Homebrew。
+> - **macOS / Linux 共用**：使用 [mise](https://mise.jdx.dev) 通过 `mise.toml` 安装所有开发 CLI 与运行时（Node/Go/Python/Java/uv 等）。
+> - **macOS 额外**：保留 Homebrew 本体（用户日常 `brew install` 兜底，本项目不再依赖 Brewfile）；通过脚本下载 Maple Mono / JetBrains Mono Nerd Font 到 `~/Library/Fonts/`。
+> - **Linux（含 root）额外**：使用系统包管理器（apt/dnf/apk）安装基础工具（git/curl/zsh/zip/build-essential 等）。
 
 ## 快速开始
 
@@ -31,30 +32,28 @@ source ~/.zshrc
 
 ## 包含的工具
 
-### macOS（Brewfile）
+### 开发 CLI 与运行时（macOS + Linux 共用，由 mise 管理）
 
-详见 [`Brewfile`](Brewfile)。包含 git/gh/lazygit/git-delta、starship/fzf/zoxide/fd/ripgrep、neovim/htop/btop/jq、python@3.14/go/uv，以及 Maple Mono / JetBrains Mono Nerd Font。
+详见 [`mise.toml`](mise.toml)：
 
-### Linux（apt + mise）
-
-**apt/dnf/apk 装基础系统工具**：`git curl wget vim zsh zip unzip tree htop jq build-essential`
-
-**[mise](https://mise.jdx.dev) 装开发 CLI 与运行时**（详见 [`mise.toml`](mise.toml)）：
-
-- CLI：starship、fzf、zoxide、fd、ripgrep、gh、lazygit、git-delta、neovim、btop、yazi
-- 运行时：Node.js（替代 Volta）、Go、Python、uv、Java（替代 SDKMAN）
+- **CLI**：starship、fzf、zoxide、fd、ripgrep、gh、lazygit、git-delta、neovim、btop、yazi、jq
+- **运行时**：Node.js、Go、Python、uv、Java
 - 后端优先 `aqua:` / `ubi:`（GitHub release 预编译二进制，无需编译工具链，root 友好）
+
+### macOS 独有
+
+- **Homebrew 本体**（保留，但本项目不再用 `brew bundle`；用户可自由 `brew install` 任何额外工具）
+- **字体**（脚本下载到 `~/Library/Fonts/`）：Maple Mono NF CN、JetBrains Mono Nerd Font
+
+### Linux 独有（apt/dnf/apk）
+
+基础系统工具：`git curl wget vim zsh zip unzip tree htop jq build-essential`
 
 ### 自动安装（双平台）
 
 - **Bun**：JavaScript 运行时（官方安装脚本）
 - **pnpm**：Node.js 包管理器（官方安装脚本）
 - **Oh My Zsh** + Zsh 插件（git clone）
-
-### macOS 独有
-
-- **Volta**：Node.js 版本管理器（Linux 由 mise 接管）
-- **SDKMAN**：Java/Kotlin/Scala 版本管理器（Linux 由 mise 提供 `java`）
 
 ## 配置文件说明
 
@@ -63,7 +62,7 @@ source ~/.zshrc
 - `dev-setup.zsh`：统一的开发环境配置（PATH、别名、工具初始化）
   - 自动检测并集成 Kaku（如已安装）
   - 包含 Oh My Zsh、fzf、zoxide、yazi 等工具配置
-  - 内置 pnpm、bun、SDKMAN、Android SDK、Go 等环境变量
+  - 跨平台 `mise activate`，外加 pnpm、bun、Go 等环境变量
 - `.gitconfig`：Git 配置（delta diff、zdiff3 合并、常用别名）
 - `starship.toml`：Starship 提示符配置（极简单行风格）
 
@@ -106,19 +105,9 @@ source ~/.zshrc
 
 ### 同步本机环境到 repo
 
-**macOS（Brewfile）**：
+编辑仓库根目录的 `mise.toml` 增删工具，然后：
 
 ```bash
-brew bundle dump --force
-git add Brewfile
-git commit -m "chore: update Brewfile"
-git push
-```
-
-**Linux（mise.toml）**：
-
-```bash
-# 编辑仓库根目录的 mise.toml 增删工具，然后：
 mise install
 git add mise.toml
 git commit -m "chore: update mise tool list"
@@ -127,8 +116,10 @@ git push
 
 ### 添加新工具
 
-- macOS：`brew install <name>` 后 `brew bundle dump --force`
-- Linux：在 `mise.toml` 中加一行（优先 `aqua:`/`ubi:` 后端），运行 `mise install`
+在 `mise.toml` 中加一行（优先 `aqua:`/`ubi:` 后端），运行 `mise install`。如某工具在 mise registry 中不可用：
+
+- macOS：可用 `brew install <name>` 临时安装（不进 repo）
+- Linux：通过对应发行版包管理器或 cargo/pip 等
 
 ### 更新配置文件
 
@@ -143,15 +134,14 @@ git push
 
 ```
 dev-setup/
-├── install.sh              # 主安装脚本（macOS → Homebrew；Linux → apt + mise）
-├── Brewfile                # macOS 软件清单（Homebrew Bundle）
-├── mise.toml               # Linux 工具清单（mise，软链接到 ~/.config/mise/config.toml）
+├── install.sh              # 主安装脚本（macOS → brew 本体 + mise + 字体；Linux → apt + mise）
+├── mise.toml               # 跨平台工具清单（软链接到 ~/.config/mise/config.toml）
 ├── Makefile                # 测试命令入口（make test-all / make test-root）
 ├── Dockerfile              # Docker 测试环境（Ubuntu 24.04，覆盖 testuser + root 双路径）
 ├── CLAUDE.md               # Claude Code 项目指南
 ├── AGENTS.md               # 同 CLAUDE.md（兼容性）
 ├── dotfiles/               # 配置文件
-│   ├── dev-setup.zsh      # 统一环境配置（按平台分流加载 Homebrew / mise）
+│   ├── dev-setup.zsh      # 统一环境配置（macOS/Linux 共用 mise activate）
 │   ├── .gitconfig         # Git 配置（软链接到 ~/.gitconfig）
 │   └── starship.toml      # Starship 配置（软链接到 ~/.config/starship.toml）
 ├── scripts/                # 测试脚本
@@ -164,13 +154,13 @@ dev-setup/
 
 ## 特性
 
-- ✅ 跨平台（macOS + Linux Ubuntu/Debian/Fedora/Alpine）
+- ✅ 跨平台（macOS + Linux Ubuntu/Debian/Fedora/Alpine）统一使用 mise
 - ✅ **Linux root 用户支持**（通过 mise，绕开 Homebrew 限制）
 - ✅ 幂等性设计（可重复运行）
 - ✅ 智能 Kaku 集成（自动检测并优化）
 - ✅ 模块化配置（通过 source 加载，不覆盖现有 .zshrc）
 - ✅ 软链接管理（配置文件自动同步）
-- ✅ 中国大陆镜像加速（macOS 自动切 USTC；Linux 提示走 `https_proxy` / `GITHUB_TOKEN`）
+- ✅ 中国大陆镜像加速（macOS Homebrew 本体走 USTC；mise 走 `https_proxy` / `GITHUB_TOKEN`）
 - ✅ Docker 隔离测试（普通用户 + root 双路径）
 
 ## 在 Linux 服务器（含 root）使用
@@ -233,7 +223,7 @@ make test-root         # Linux root 路径测试
 
 ## 注意事项
 
-- 使用 Homebrew 统一管理软件包
+- 工具链统一由 mise 管理；macOS 上 Homebrew 仅保留本体作为日常兜底
 - **不要提交敏感信息**（SSH 私钥、API token、密码等）
 - 首次使用需修改 `.gitconfig` 中的用户名和邮箱
 - `install.sh` 采用追加模式，不会覆盖现有 `~/.zshrc` 内容

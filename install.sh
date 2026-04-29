@@ -6,9 +6,9 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" 2>/dev/null && pwd)"
 
 echo "🚀 开始安装开发环境..."
 
-# 检测 SCRIPT_DIR 是否为目标仓库（包含 Brewfile 和 dotfiles）
+# 检测 SCRIPT_DIR 是否为目标仓库（包含 mise.toml 和 dotfiles）
 # 覆盖 curl | bash、cat install.sh | bash、bash install.sh 等场景
-if [[ ! -f "$SCRIPT_DIR/Brewfile" ]] || [[ ! -d "$SCRIPT_DIR/dotfiles" ]]; then
+if [[ ! -f "$SCRIPT_DIR/mise.toml" ]] || [[ ! -d "$SCRIPT_DIR/dotfiles" ]]; then
   echo "📥 检测到脚本不在仓库目录中，正在克隆仓库..."
   REPO_URL="https://github.com/OiAnthony/dev-setup.git"
   INSTALL_DIR="$HOME/.dev-setup"
@@ -66,6 +66,72 @@ _dev_setup_is_china() {
 
   [[ "$country" == "CN" ]] && return 0
   return 1
+}
+
+# ---------------------------------------------------------------------------
+# 安装 mise 并应用工具清单（macOS / Linux 共用）
+# ---------------------------------------------------------------------------
+_install_mise() {
+  if ! command -v mise &>/dev/null; then
+    echo "📦 安装 mise..."
+    curl -fsSL https://mise.run | sh
+  else
+    echo "✅ mise 已安装"
+  fi
+
+  export PATH="$HOME/.local/bin:$PATH"
+
+  if ! command -v mise &>/dev/null; then
+    echo "❌ mise 安装失败或不在 PATH ($HOME/.local/bin) 中，无法继续。"
+    exit 1
+  fi
+
+  mkdir -p "$HOME/.config/mise"
+  ln -sf "$SCRIPT_DIR/mise.toml" "$HOME/.config/mise/config.toml"
+
+  echo "📦 通过 mise 安装工具链（首次需下载，可能耗时较久）..."
+  mise install || {
+    echo "⚠️  mise install 部分失败，常见原因：网络受限、GitHub release 限流。"
+    echo "   可设置 https_proxy 或 GITHUB_TOKEN 后重新运行。"
+  }
+}
+
+# ---------------------------------------------------------------------------
+# macOS 字体安装（脚本下载 GitHub release 替代 cask）
+# ---------------------------------------------------------------------------
+_install_fonts_macos() {
+  local font_dir="$HOME/Library/Fonts"
+  mkdir -p "$font_dir"
+
+  if ! ls "$font_dir"/MapleMono-NF-CN-*.ttf >/dev/null 2>&1; then
+    echo "📦 下载 Maple Mono NF CN..."
+    local tmp; tmp=$(mktemp -d)
+    if curl -fsSL -o "$tmp/maple.zip" \
+        "https://github.com/subframe7536/maple-font/releases/latest/download/MapleMono-NF-CN.zip"; then
+      unzip -q -o "$tmp/maple.zip" -d "$font_dir"
+      echo "✅ Maple Mono NF CN 已安装"
+    else
+      echo "⚠️  Maple Mono 下载失败，跳过"
+    fi
+    rm -rf "$tmp"
+  else
+    echo "✅ Maple Mono NF CN 已存在"
+  fi
+
+  if ! ls "$font_dir"/JetBrainsMonoNerdFont-*.ttf >/dev/null 2>&1; then
+    echo "📦 下载 JetBrains Mono Nerd Font..."
+    local tmp; tmp=$(mktemp -d)
+    if curl -fsSL -o "$tmp/jb.zip" \
+        "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.zip"; then
+      unzip -q -o "$tmp/jb.zip" -d "$font_dir"
+      echo "✅ JetBrains Mono Nerd Font 已安装"
+    else
+      echo "⚠️  JetBrains Mono 下载失败，跳过"
+    fi
+    rm -rf "$tmp"
+  else
+    echo "✅ JetBrains Mono Nerd Font 已存在"
+  fi
 }
 
 # ---------------------------------------------------------------------------
@@ -141,12 +207,12 @@ _configure_default_shell() {
 }
 
 # ===========================================================================
-# 平台分流：macOS → Homebrew；Linux（含 root）→ apt + mise
+# 平台分流：macOS → Homebrew 本体 + mise + 字体；Linux（含 root）→ apt + mise
 # ===========================================================================
 
 if [[ "$CURRENT_OS" == "Darwin" ]]; then
   # -------------------------------------------------------------------------
-  # macOS 路径：Homebrew + Brewfile
+  # macOS 路径：保留 Homebrew 本体（用户日常 brew install），工具链交给 mise
   # -------------------------------------------------------------------------
 
   _configure_default_shell
@@ -160,7 +226,7 @@ if [[ "$CURRENT_OS" == "Darwin" ]]; then
   fi
 
   if ! command -v brew &> /dev/null; then
-    echo "📦 安装 Homebrew..."
+    echo "📦 安装 Homebrew（仅本体，工具链由 mise 管理）..."
 
     # 在非交互式环境下（如 curl | bash），stdin 被管道占用
     # 需要通过 /dev/tty 获取 sudo 权限
@@ -187,17 +253,16 @@ if [[ "$CURRENT_OS" == "Darwin" ]]; then
     echo "✅ Homebrew 已安装"
   fi
 
-  if ! command -v brew &> /dev/null; then
-    echo "❌ Homebrew 安装失败或不在 PATH 中，无法继续。"
-    exit 1
+  # 中国大陆网络下 mise 仍走 GitHub release
+  if _dev_setup_is_china; then
+    if [[ -z "${https_proxy:-}${HTTPS_PROXY:-}" ]] && [[ -z "${GITHUB_TOKEN:-}" ]]; then
+      echo "   ⚠️  mise 通过 GitHub release 拉取二进制，建议设置 https_proxy 或 GITHUB_TOKEN 加速。"
+      echo "   示例: export https_proxy=http://127.0.0.1:7890"
+    fi
   fi
 
-  echo "📦 安装 Brewfile 软件包..."
-  if brew bundle check --file="$SCRIPT_DIR/Brewfile" &>/dev/null; then
-    echo "✅ 所有 Brewfile 包已安装"
-  else
-    brew bundle --file="$SCRIPT_DIR/Brewfile"
-  fi
+  _install_mise
+  _install_fonts_macos
 
 elif [[ "$CURRENT_OS" == "Linux" ]]; then
   # -------------------------------------------------------------------------
@@ -216,33 +281,7 @@ elif [[ "$CURRENT_OS" == "Linux" ]]; then
     fi
   fi
 
-  # 安装 mise
-  if ! command -v mise &>/dev/null; then
-    echo "📦 安装 mise..."
-    # 默认安装到 $HOME/.local/bin/mise（root 下即 /root/.local/bin/mise）
-    curl -fsSL https://mise.run | sh
-  else
-    echo "✅ mise 已安装"
-  fi
-
-  # 把 mise 加入当前会话 PATH
-  export PATH="$HOME/.local/bin:$PATH"
-
-  if ! command -v mise &>/dev/null; then
-    echo "❌ mise 安装失败或不在 PATH ($HOME/.local/bin) 中，无法继续。"
-    exit 1
-  fi
-
-  # 软链接 mise.toml 到全局配置位置
-  mkdir -p "$HOME/.config/mise"
-  ln -sf "$SCRIPT_DIR/mise.toml" "$HOME/.config/mise/config.toml"
-
-  echo "📦 通过 mise 安装工具链（首次需下载，可能耗时较久）..."
-  # mise install 读取 ~/.config/mise/config.toml
-  mise install || {
-    echo "⚠️  mise install 部分失败，常见原因：网络受限、GitHub release 限流。"
-    echo "   可设置 https_proxy 或 GITHUB_TOKEN 后重新运行。"
-  }
+  _install_mise
 
 else
   echo "❌ 不支持的操作系统: $CURRENT_OS"
@@ -250,7 +289,7 @@ else
 fi
 
 # ===========================================================================
-# 共用步骤：Oh My Zsh、dotfiles、Bun、pnpm、Volta/SDKMAN（仅 macOS）
+# 共用步骤：Oh My Zsh、dotfiles、Bun、pnpm
 # ===========================================================================
 
 # 安装 Oh My Zsh
@@ -301,27 +340,6 @@ elif [[ ! -f ~/.zshrc ]]; then
   echo "✅ 已创建 ~/.zshrc"
 else
   echo "✅ ~/.zshrc 已包含 dev-setup 配置"
-fi
-
-# Volta + SDKMAN 仅在 macOS 安装；Linux 路径下由 mise 提供 node/java
-if [[ "$CURRENT_OS" == "Darwin" ]]; then
-  if [[ ! -d "$HOME/.volta" ]]; then
-    echo "📦 安装 Volta..."
-    curl https://get.volta.sh | bash
-    export VOLTA_HOME="$HOME/.volta"
-    export PATH="$VOLTA_HOME/bin:$PATH"
-    echo "📦 通过 Volta 安装 Node.js..."
-    volta install node
-  else
-    echo "✅ Volta 已安装"
-  fi
-
-  if [[ ! -d "$HOME/.sdkman" ]]; then
-    echo "📦 安装 SDKMAN..."
-    curl -s "https://get.sdkman.io" | bash
-  else
-    echo "✅ SDKMAN 已安装"
-  fi
 fi
 
 # Bun（双平台）

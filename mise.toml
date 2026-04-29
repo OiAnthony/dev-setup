@@ -1,4 +1,4 @@
-# mise tool manifest (Linux/server path; macOS still uses Brewfile).
+# mise tool manifest (shared between macOS and Linux).
 # install.sh symlinks this file to ~/.config/mise/config.toml so it is
 # the global mise configuration on the host.
 #
@@ -10,7 +10,7 @@
 
 [tools]
 
-# Language runtimes (replace Volta + SDKMAN on Linux)
+# Language runtimes (replace Volta + SDKMAN)
 node    = "lts"
 go      = "latest"
 python  = "3.14"
@@ -29,6 +29,7 @@ uv      = "latest"
 "aqua:neovim/neovim"               = "latest"
 "aqua:aristocratos/btop"           = "latest"
 "aqua:sxyazi/yazi"                 = "latest"
+"aqua:jqlang/jq"                   = "latest"
 
 [settings]
 # Trust this config when symlinked into ~/.config/mise/config.toml.

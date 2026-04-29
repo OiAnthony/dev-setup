@@ -11,10 +11,12 @@ dev-setup 使用 Docker 容器提供隔离的测试环境，验证 `install.sh` 
 **目的**：在运行前捕获 Shell 脚本语法错误和常见问题
 
 **覆盖文件**：
+
 - `install.sh`
 - `dotfiles/dev-setup.zsh`（advisory-only，zsh 语法可能误报）
 
 **运行方式**：
+
 ```bash
 make lint
 ```
@@ -24,14 +26,16 @@ make lint
 **目的**：验证完整安装流程
 
 **测试内容**：
-- Homebrew 包安装（git, gh, node, python3, go, starship, fzf, fd, rg, jq, nvim, zoxide, tree）
+
+- mise 工具链安装（starship, fzf, fd, rg, gh, lazygit, delta, nvim, node, go, python, java, uv, jq）
 - Oh My Zsh 安装
 - Zsh 插件克隆（zsh-syntax-highlighting, zsh-autosuggestions, zsh-completions）
-- 软链接创建（.gitconfig, starship.toml）
+- 软链接创建（.gitconfig, starship.toml, mise/config.toml）
 - .zshrc 配置追加
-- 可选工具安装（Bun, pnpm, SDKMAN）
+- 可选工具安装（Bun, pnpm）
 
 **运行方式**：
+
 ```bash
 make test
 ```
@@ -41,11 +45,13 @@ make test
 **目的**：验证 Kaku 检测逻辑
 
 **测试场景**：
+
 - 创建 `~/.config/kaku/zsh/kaku.zsh` 模拟 Kaku 存在
 - 运行 install.sh
 - 验证插件安装被正确跳过（避免重复）
 
 **运行方式**：
+
 ```bash
 make test-kaku
 ```
@@ -55,11 +61,13 @@ make test-kaku
 **目的**：验证重复运行安全性
 
 **测试内容**：
+
 - 运行 install.sh 两次
 - 验证软链接未改变（md5sum）
 - 验证 .zshrc 中 source 行只出现一次（未重复追加）
 
 **运行方式**：
+
 ```bash
 make test-idempotent
 ```
@@ -71,18 +79,19 @@ make test-idempotent
 **FROM**: ubuntu:24.04
 
 **预装组件**：
+
 - 系统依赖：build-essential, curl, git, zsh, sudo
-- Homebrew（独立层，优化缓存）
-- 非 root 用户 testuser（Homebrew 要求）
+- 非 root 用户 testuser（用于 testuser 路径，root 路径通过 `-u 0` 覆盖）
 
 ### 缓存优化
 
 **分层策略**：
+
 1. 系统依赖安装（很少变化）
-2. Homebrew 安装（很少变化）
-3. 项目文件复制（频繁变化）
+2. 项目文件复制（频繁变化）
 
 **效果**：
+
 - 冷缓存：~10 分钟
 - 热缓存：~4 分钟（仅重新复制项目文件）
 
@@ -91,15 +100,18 @@ make test-idempotent
 ### GitHub Actions
 
 **触发条件**：
+
 - push 到 main 分支
 - 创建 PR
 
 **Job 1: lint**（快速门禁）
+
 - 安装 ShellCheck
 - 检查 install.sh
 - 检查 dev-setup.zsh（advisory-only）
 
 **Job 2: integration**（依赖 lint）
+
 - 构建 Docker 镜像（使用 GitHub Actions 缓存）
 - 运行集成测试
 - 运行 Kaku 路径测试
@@ -110,6 +122,7 @@ make test-idempotent
 ### macOS 特定路径
 
 Docker 无法运行 macOS，以下路径不会被测试：
+
 - Apple Silicon Homebrew 路径：`/opt/homebrew`
 - Intel Mac Homebrew 路径：`/usr/local`
 
@@ -118,12 +131,14 @@ Docker 无法运行 macOS，以下路径不会被测试：
 ### Shell 启动性能
 
 不自动化测试 `time zsh -i -c exit`，原因：
+
 - 容器环境性能不代表真实环境
 - 性能优化主要针对 Kaku 集成，需手动验证
 
 ### 交互式 Shell 会话
 
 不测试完整的 shell 会话，仅验证：
+
 - 配置文件存在
 - 配置文件被正确引用
 - 软链接指向正确
@@ -151,6 +166,7 @@ cat ~/.zshrc
 ### 查看测试日志
 
 测试脚本使用颜色输出：
+
 - 🟢 绿色：成功
 - 🔴 红色：失败
 - 🟡 黄色：警告（可选工具未安装）
@@ -171,6 +187,7 @@ done
 ### 修改 Kaku 检测逻辑
 
 同时更新：
+
 1. `install.sh` - 安装时检测
 2. `dotfiles/dev-setup.zsh` - 运行时检测
 3. `scripts/test-install.sh` - 测试验证
@@ -181,30 +198,33 @@ GitHub Actions 缓存键基于 Dockerfile 内容，修改 Dockerfile 会自动�
 
 ## 故障排查
 
-### 测试失败：Homebrew 包未安装
+### 测试失败：mise 工具未装
 
-**原因**：Brewfile 中的包在 Linux 上不可用
+**原因**：GitHub release 拉取受限或网络问题
 
 **解决**：
-- 检查包是否支持 Linux
-- 使用 `brew info <package>` 验证
-- 考虑添加平台检测逻辑
+
+- 设置 `https_proxy` 或 `GITHUB_TOKEN`
+- 检查 `mise.toml` 中的后端是否可用：`mise registry | grep <tool>`
+- 单独运行 `mise install` 查看详细错误
 
 ### 测试失败：软链接验证
 
 **原因**：路径不匹配
 
 **解决**：
+
 - 检查 `install.sh` 中的软链接创建逻辑
 - 验证 `PROJECT_ROOT` 变量正确
 
 ### CI 超时
 
-**原因**：Homebrew 安装耗时过长
+**原因**：首次安装下载量大
 
 **解决**：
-- 检查 GitHub Actions 缓存是否生效
-- 考虑减少 Brewfile 中的包数量（仅测试代表性工具）
+
+- 设置 `GITHUB_TOKEN` 提高 GitHub release 限流
+- 在 mise.toml 中 pin 具体版本，提高缓存命中
 
 ## 参考
 

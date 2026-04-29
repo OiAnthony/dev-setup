@@ -53,8 +53,8 @@ if [[ "$OSTYPE" == darwin* ]]; then
   fi
 fi
 
-# Linux: mise（在 PATH 中前置 ~/.local/bin 后再激活）
-if [[ "$OSTYPE" == linux* ]] && command -v mise &>/dev/null; then
+# mise: 跨平台工具链管理（macOS + Linux 共用）
+if command -v mise &>/dev/null; then
   eval "$(mise activate zsh)"
 fi
 
@@ -116,21 +116,6 @@ fuck() {
 }
 
 # =========== 包管理器 ===========
-
-# Volta / SDKMAN 仅在 macOS 启用；Linux 下 Node/Java 由 mise 提供
-if [[ "$OSTYPE" == darwin* ]]; then
-  # Volta - Node.js 版本管理器
-  export VOLTA_HOME="${VOLTA_HOME:-$HOME/.volta}"
-  export PATH="$VOLTA_HOME/bin:$PATH"
-
-  # SDKMAN - 懒加载（仅在首次使用 sdk 命令时初始化）
-  export SDKMAN_DIR="${SDKMAN_DIR:-$HOME/.sdkman}"
-  sdk() {
-    unfunction sdk
-    [[ -s "$SDKMAN_DIR/bin/sdkman-init.sh" ]] && source "$SDKMAN_DIR/bin/sdkman-init.sh"
-    sdk "$@"
-  }
-fi
 
 # pnpm - 优先使用环境变量，fallback 到默认路径
 export PNPM_HOME="${PNPM_HOME:-$HOME/Library/pnpm}"
