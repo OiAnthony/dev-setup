@@ -68,11 +68,49 @@ if [[ "$EUID" -eq 0 ]]; then
   exit 1
 fi
 
+# 包管理器命令前缀（root 不需要 sudo）
+SUDO=""
+if [[ "$EUID" -ne 0 ]]; then
+  SUDO="sudo"
+fi
+
+# Linux 下若缺少 zsh，使用系统包管理器安装
+_install_zsh_linux() {
+  if command -v apt-get &>/dev/null; then
+    echo "📦 使用 apt-get 安装 zsh..."
+    $SUDO apt-get update -y
+    $SUDO apt-get install -y zsh
+  elif command -v dnf &>/dev/null; then
+    echo "📦 使用 dnf 安装 zsh..."
+    $SUDO dnf install -y zsh
+  elif command -v yum &>/dev/null; then
+    echo "📦 使用 yum 安装 zsh..."
+    $SUDO yum install -y zsh
+  elif command -v pacman &>/dev/null; then
+    echo "📦 使用 pacman 安装 zsh..."
+    $SUDO pacman -Sy --noconfirm zsh
+  elif command -v apk &>/dev/null; then
+    echo "📦 使用 apk 安装 zsh..."
+    $SUDO apk add --no-cache zsh
+  else
+    echo "❌ 未识别的 Linux 发行版包管理器，请手动安装 zsh 后重试。"
+    return 1
+  fi
+}
+
 # 配置 Zsh 为默认 Shell（提前执行，确保后续步骤在 Zsh 环境下进行）
 CURRENT_SHELL="$(basename "$SHELL")"
 if [[ "$CURRENT_SHELL" != "zsh" ]]; then
   echo "🐚 配置 Zsh 为默认 Shell..."
   ZSH_PATH="$(command -v zsh)"
+
+  if [[ -z "$ZSH_PATH" ]]; then
+    if [[ "$CURRENT_OS" == "Linux" ]]; then
+      echo "⚠️  未找到 zsh，尝试通过系统包管理器安装..."
+      _install_zsh_linux || exit 1
+      ZSH_PATH="$(command -v zsh)"
+    fi
+  fi
 
   if [[ -z "$ZSH_PATH" ]]; then
     echo "❌ 未找到 zsh，请确认系统已预装或稍后通过 Homebrew 安装。"
@@ -81,7 +119,7 @@ if [[ "$CURRENT_SHELL" != "zsh" ]]; then
     # 确保 zsh 路径在 /etc/shells 中
     if ! grep -qxF "$ZSH_PATH" /etc/shells; then
       echo "📝 将 $ZSH_PATH 添加到 /etc/shells..."
-      echo "$ZSH_PATH" | sudo tee -a /etc/shells >/dev/null
+      echo "$ZSH_PATH" | $SUDO tee -a /etc/shells >/dev/null
     fi
 
     chsh -s "$ZSH_PATH"
