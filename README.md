@@ -1,6 +1,10 @@
 # 开发环境自动化配置
 
-快速在新 macOS 或 Linux（Ubuntu）机器上还原开发环境。支持 Oh My Zsh + Kaku 双系统优化，启动性能提升 80-120ms。中国大陆网络自动切换 USTC 镜像加速。
+快速在新 macOS 或 Linux（Ubuntu/Debian/Fedora/Alpine 等）机器上还原开发环境。支持 Oh My Zsh + Kaku 双系统优化，启动性能提升 80-120ms。中国大陆网络自动切换 USTC 镜像加速（macOS）。
+
+> **平台策略**
+> - **macOS**：使用 Homebrew + `Brewfile` 安装所有 CLI 工具，配合 Volta、SDKMAN 管理运行时。
+> - **Linux（含 root）**：使用系统包管理器（apt/dnf/apk）安装基础工具，使用 [mise](https://mise.jdx.dev) 通过 `mise.toml` 安装开发 CLI 与运行时（Node/Go/Python/Java）。**Homebrew 在 root 下不可用**，因此 Linux 路径不依赖 Homebrew。
 
 ## 快速开始
 
@@ -27,54 +31,30 @@ source ~/.zshrc
 
 ## 包含的工具
 
-### 核心工具（Brewfile 自动安装）
+### macOS（Brewfile）
 
-**版本控制**：
+详见 [`Brewfile`](Brewfile)。包含 git/gh/lazygit/git-delta、starship/fzf/zoxide/fd/ripgrep、neovim/htop/btop/jq、python@3.14/go/uv，以及 Maple Mono / JetBrains Mono Nerd Font。
 
-- Git + GitHub CLI (gh)
-- git-delta（更好的 diff 显示，集成到 .gitconfig）
-- lazygit（Git TUI）
-- gitsu（Git 用户切换）
+### Linux（apt + mise）
 
-**编程语言**：
+**apt/dnf/apk 装基础系统工具**：`git curl wget vim zsh zip unzip tree htop jq build-essential`
 
-- Node.js（通过 Volta 版本管理器安装）
-- Python 3.14 + uv（现代 Python 包管理器）
-- Go
+**[mise](https://mise.jdx.dev) 装开发 CLI 与运行时**（详见 [`mise.toml`](mise.toml)）：
 
-**Shell 增强**：
+- CLI：starship、fzf、zoxide、fd、ripgrep、gh、lazygit、git-delta、neovim、btop、yazi
+- 运行时：Node.js（替代 Volta）、Go、Python、uv、Java（替代 SDKMAN）
+- 后端优先 `aqua:` / `ubi:`（GitHub release 预编译二进制，无需编译工具链，root 友好）
 
-- Starship（自定义提示符，极简配置）
-- zoxide（智能目录跳转，`cd` 替代）
-- fzf（模糊查找 + 自定义 `fzf-cd` 函数）
-- fd（更快的 find）
-- ripgrep（更快的 grep）
+### 自动安装（双平台）
 
-**系统工具**：
+- **Bun**：JavaScript 运行时（官方安装脚本）
+- **pnpm**：Node.js 包管理器（官方安装脚本）
+- **Oh My Zsh** + Zsh 插件（git clone）
 
-- htop / btop（系统监控）
-- curl / wget（下载工具）
-- vim / neovim（编辑器，默认 EDITOR=nvim）
-- tree（目录树）
-- jq（JSON 处理）
+### macOS 独有
 
-**字体**：
-
-- Maple Mono Nerd Font CN（中文优化）
-- JetBrains Mono Nerd Font
-
-### 自动安装工具（install.sh）
-
-以下工具由 `install.sh` 自动安装，无需手动操作：
-
-- **Volta**：Node.js 版本管理器（自动安装 Node.js）
-- **Bun**：JavaScript 运行时和包管理器
-- **pnpm**：快速的 Node.js 包管理器
-- **SDKMAN**：Java/Kotlin/Scala 版本管理器
-
-### 可选工具
-
-- **podman**：Docker 替代品（免费商用），需取消注释 Brewfile 中的 `# brew "podman"`
+- **Volta**：Node.js 版本管理器（Linux 由 mise 接管）
+- **SDKMAN**：Java/Kotlin/Scala 版本管理器（Linux 由 mise 提供 `java`）
 
 ## 配置文件说明
 
@@ -126,24 +106,29 @@ source ~/.zshrc
 
 ### 同步本机环境到 repo
 
-```bash
-# 更新 Brewfile
-brew bundle dump --force
+**macOS（Brewfile）**：
 
-# 提交更改（配置文件已通过软链接自动同步）
+```bash
+brew bundle dump --force
 git add Brewfile
 git commit -m "chore: update Brewfile"
 git push
 ```
 
-### 添加新工具
+**Linux（mise.toml）**：
 
 ```bash
-brew install 新工具名
-brew bundle dump --force
-git commit -am "feat: add 新工具名"
+# 编辑仓库根目录的 mise.toml 增删工具，然后：
+mise install
+git add mise.toml
+git commit -m "chore: update mise tool list"
 git push
 ```
+
+### 添加新工具
+
+- macOS：`brew install <name>` 后 `brew bundle dump --force`
+- Linux：在 `mise.toml` 中加一行（优先 `aqua:`/`ubi:` 后端），运行 `mise install`
 
 ### 更新配置文件
 
@@ -158,18 +143,19 @@ git push
 
 ```
 dev-setup/
-├── install.sh              # 主安装脚本（Homebrew、Oh My Zsh、Volta、Bun、pnpm、SDKMAN）
-├── Brewfile                # 软件清单（Homebrew Bundle）
-├── Makefile                # 测试命令入口（make test-all）
-├── Dockerfile              # Docker 测试环境（Ubuntu 24.04 + Homebrew）
+├── install.sh              # 主安装脚本（macOS → Homebrew；Linux → apt + mise）
+├── Brewfile                # macOS 软件清单（Homebrew Bundle）
+├── mise.toml               # Linux 工具清单（mise，软链接到 ~/.config/mise/config.toml）
+├── Makefile                # 测试命令入口（make test-all / make test-root）
+├── Dockerfile              # Docker 测试环境（Ubuntu 24.04，覆盖 testuser + root 双路径）
 ├── CLAUDE.md               # Claude Code 项目指南
 ├── AGENTS.md               # 同 CLAUDE.md（兼容性）
 ├── dotfiles/               # 配置文件
-│   ├── dev-setup.zsh      # 统一环境配置（通过 source 加载）
+│   ├── dev-setup.zsh      # 统一环境配置（按平台分流加载 Homebrew / mise）
 │   ├── .gitconfig         # Git 配置（软链接到 ~/.gitconfig）
 │   └── starship.toml      # Starship 配置（软链接到 ~/.config/starship.toml）
 ├── scripts/                # 测试脚本
-│   ├── test-install.sh    # 集成测试（支持 --with-kaku 参数）
+│   ├── test-install.sh    # 集成测试（按 OS 分支验证）
 │   └── test-idempotent.sh # 幂等性测试
 └── docs/                   # 文档
     ├── zsh-optimization.md # Zsh 性能优化说明
@@ -178,14 +164,38 @@ dev-setup/
 
 ## 特性
 
-- ✅ 跨平台支持（macOS + Linux Ubuntu）
+- ✅ 跨平台（macOS + Linux Ubuntu/Debian/Fedora/Alpine）
+- ✅ **Linux root 用户支持**（通过 mise，绕开 Homebrew 限制）
 - ✅ 幂等性设计（可重复运行）
 - ✅ 智能 Kaku 集成（自动检测并优化）
 - ✅ 模块化配置（通过 source 加载，不覆盖现有 .zshrc）
 - ✅ 软链接管理（配置文件自动同步）
-- ✅ 中国大陆镜像加速（自动检测网络环境，切换 USTC 镜像）
-- ✅ 自动安装工具链（Volta、Bun、pnpm、SDKMAN）
-- ✅ Docker 隔离测试（验证安装脚本正确性）
+- ✅ 中国大陆镜像加速（macOS 自动切 USTC；Linux 提示走 `https_proxy` / `GITHUB_TOKEN`）
+- ✅ Docker 隔离测试（普通用户 + root 双路径）
+
+## 在 Linux 服务器（含 root）使用
+
+```bash
+# 直接以 root 一键安装
+curl -fsSL https://raw.githubusercontent.com/OiAnthony/dev-setup/main/install.sh | bash
+```
+
+中国大陆环境建议先设置代理：
+
+```bash
+export https_proxy=http://127.0.0.1:7890
+# 或使用 GITHUB_TOKEN 提高 release 限流
+export GITHUB_TOKEN=ghp_xxx
+curl -fsSL https://raw.githubusercontent.com/OiAnthony/dev-setup/main/install.sh | bash
+```
+
+mise 管理的工具不一定出现在裸 PATH 中，使用 `mise activate`（已在 `dev-setup.zsh` 中自动 eval）后或通过 `mise exec -- <cmd>` 调用。常用命令：
+
+```bash
+mise ls                    # 列出已安装版本
+mise use --global node@22  # 全局切换 Node.js 版本
+mise install               # 按 mise.toml 安装/更新所有工具
+```
 
 ## 测试
 
@@ -204,9 +214,10 @@ make lint
 make test-all
 
 # 单独运行测试
-make test              # 集成测试
+make test              # 集成测试（普通用户 / Linux）
 make test-kaku         # Kaku 路径测试
 make test-idempotent   # 幂等性测试
+make test-root         # Linux root 路径测试
 ```
 
 ### CI/CD

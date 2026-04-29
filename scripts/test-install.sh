@@ -2,6 +2,10 @@
 set -euo pipefail
 
 # 集成测试脚本：验证 install.sh 在干净环境下的安装结果
+# 同时覆盖：
+#   - macOS 路径（Homebrew + Brewfile） — 实际只在 mac runner 上执行
+#   - Linux 普通用户路径（apt + mise）
+#   - Linux root 路径（apt + mise）
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -10,21 +14,12 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
-log_info() {
-    echo -e "${GREEN}[INFO]${NC} $*"
-}
+log_info()  { echo -e "${GREEN}[INFO]${NC} $*"; }
+log_error() { echo -e "${RED}[ERROR]${NC} $*"; }
+log_warn()  { echo -e "${YELLOW}[WARN]${NC} $*"; }
 
-log_error() {
-    echo -e "${RED}[ERROR]${NC} $*"
-}
-
-log_warn() {
-    echo -e "${YELLOW}[WARN]${NC} $*"
-}
-
-# 检查命令是否存在
 check_command() {
     local cmd=$1
     if command -v "$cmd" >/dev/null 2>&1; then
@@ -36,7 +31,18 @@ check_command() {
     fi
 }
 
-# 检查目录是否存在
+# 通过 mise 检测工具是否可用（mise 安装的工具不一定在裸 PATH 中，需要 mise which）
+check_via_mise() {
+    local tool=$1
+    if mise which "$tool" >/dev/null 2>&1; then
+        log_info "✓ mise provides: $tool"
+        return 0
+    else
+        log_error "✗ mise does NOT provide: $tool"
+        return 1
+    fi
+}
+
 check_directory() {
     local dir=$1
     if [[ -d "$dir" ]]; then
@@ -48,7 +54,6 @@ check_directory() {
     fi
 }
 
-# 检查文件是否存在
 check_file() {
     local file=$1
     if [[ -f "$file" ]]; then
@@ -60,7 +65,6 @@ check_file() {
     fi
 }
 
-# 检查软链接
 check_symlink() {
     local link=$1
     local target=$2
@@ -80,7 +84,6 @@ check_symlink() {
     fi
 }
 
-# 检查文件内容包含指定字符串
 check_file_contains() {
     local file=$1
     local pattern=$2
@@ -93,28 +96,21 @@ check_file_contains() {
     fi
 }
 
-# 主测试流程
 main() {
     local with_kaku=false
-
-    # 解析参数
     if [[ "${1:-}" == "--with-kaku" ]]; then
         with_kaku=true
         log_info "Running with Kaku simulation"
     fi
 
-    # 如果是 Kaku 测试，创建模拟文件
     if [[ "$with_kaku" == true ]]; then
         log_info "Creating Kaku simulation..."
         mkdir -p "$HOME/.config/kaku/zsh"
         echo "# Mock Kaku config" > "$HOME/.config/kaku/zsh/kaku.zsh"
     fi
 
-    # 运行 install.sh
     log_info "Running install.sh..."
     cd "$PROJECT_ROOT"
-
-    # 设置非交互模式（跳过可选工具提示）
     export CI=true
 
     if ! ./install.sh; then
@@ -122,23 +118,45 @@ main() {
         exit 1
     fi
 
+    # install.sh 把 mise 装到 ~/.local/bin/mise，但 export 在子进程中失效
+    export PATH="$HOME/.local/bin:$PATH"
+
     log_info "Verifying installation results..."
     local failed=0
+    local os
+    os="$(uname -s)"
 
-    # 1. 验证 Homebrew 包
-    log_info "Checking Homebrew packages..."
-    for cmd in git gh node python3 go starship fzf fd rg jq nvim zoxide tree; do
-        check_command "$cmd" || ((failed++))
-    done
+    if [[ "$os" == "Darwin" ]]; then
+        # macOS: Homebrew 包应直接在 PATH 中
+        log_info "Checking Homebrew packages (macOS)..."
+        for cmd in git gh node python3 go starship fzf fd rg jq nvim zoxide tree lazygit; do
+            check_command "$cmd" || ((failed++))
+        done
+    else
+        # Linux: 基础工具来自 apt，开发 CLI 来自 mise（不一定在裸 PATH）
+        log_info "Checking apt-installed base tools (Linux)..."
+        for cmd in git curl wget vim zsh zip unzip tree htop jq; do
+            check_command "$cmd" || ((failed++))
+        done
 
-    # 2. 验证 Oh My Zsh
+        log_info "Checking mise binary..."
+        check_command mise || ((failed++))
+
+        log_info "Checking mise-managed tools..."
+        # 仅检查关键工具；其余非关键工具（btop/yazi）在低速网络下可能未装完
+        for tool in starship fzf zoxide fd rg gh lazygit delta nvim node go python uv; do
+            check_via_mise "$tool" || ((failed++))
+        done
+
+        log_info "Checking mise config symlink..."
+        check_symlink "$HOME/.config/mise/config.toml" "$PROJECT_ROOT/mise.toml" || ((failed++))
+    fi
+
     log_info "Checking Oh My Zsh..."
     check_directory "$HOME/.oh-my-zsh" || ((failed++))
 
-    # 3. 验证 Zsh 插件（根据 Kaku 状态）
     log_info "Checking Zsh plugins..."
     if [[ "$with_kaku" == true ]]; then
-        # Kaku 路径：插件应该被跳过
         if [[ -d "$HOME/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting" ]]; then
             log_error "✗ Plugin should NOT be installed (Kaku detected)"
             ((failed++))
@@ -146,23 +164,19 @@ main() {
             log_info "✓ Plugins correctly skipped (Kaku detected)"
         fi
     else
-        # 非 Kaku 路径：插件应该被安装
         check_directory "$HOME/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting" || ((failed++))
         check_directory "$HOME/.oh-my-zsh/custom/plugins/zsh-autosuggestions" || ((failed++))
         check_directory "$HOME/.oh-my-zsh/custom/plugins/zsh-completions" || ((failed++))
     fi
 
-    # 4. 验证软链接
-    log_info "Checking symlinks..."
+    log_info "Checking dotfile symlinks..."
     check_symlink "$HOME/.gitconfig" "$PROJECT_ROOT/dotfiles/.gitconfig" || ((failed++))
     check_symlink "$HOME/.config/starship.toml" "$PROJECT_ROOT/dotfiles/starship.toml" || ((failed++))
 
-    # 5. 验证 .zshrc 配置
     log_info "Checking .zshrc..."
     check_file "$HOME/.zshrc" || ((failed++))
     check_file_contains "$HOME/.zshrc" "source.*dev-setup.zsh" || ((failed++))
 
-    # 6. 验证额外工具（容忍失败）
     log_info "Checking optional tools..."
     if [[ -d "$HOME/.bun" ]]; then
         log_info "✓ Bun installed"
@@ -170,10 +184,8 @@ main() {
         log_warn "⚠ Bun not installed (optional)"
     fi
 
-    if [[ -d "$HOME/.sdkman" ]]; then
-        log_info "✓ SDKMAN installed"
-    else
-        log_warn "⚠ SDKMAN not installed (optional)"
+    if [[ "$os" == "Darwin" ]] && [[ -d "$HOME/.sdkman" ]]; then
+        log_info "✓ SDKMAN installed (macOS)"
     fi
 
     if command -v pnpm >/dev/null 2>&1; then
@@ -182,7 +194,6 @@ main() {
         log_warn "⚠ pnpm not installed (optional)"
     fi
 
-    # 总结
     echo ""
     if [[ $failed -eq 0 ]]; then
         log_info "========================================="
@@ -198,5 +209,3 @@ main() {
 }
 
 main "$@"
-
-

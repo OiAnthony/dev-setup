@@ -36,95 +36,21 @@ if [[ ! -f "$SCRIPT_DIR/Brewfile" ]] || [[ ! -d "$SCRIPT_DIR/dotfiles" ]]; then
   exec bash "$INSTALL_DIR/install.sh"
 fi
 
-# Homebrew 要求使用非 root 用户安装，提前阻止错误场景
-if [[ "$EUID" -eq 0 ]]; then
-  echo "❌ 检测到当前正在以 root 用户运行。Homebrew 要求在非 root 用户下安装。"
+# macOS 上 Homebrew 要求非 root 用户；Linux 路径走 mise，root 也支持
+if [[ "$CURRENT_OS" == "Darwin" ]] && [[ "$EUID" -eq 0 ]]; then
+  echo "❌ macOS 下检测到 root 用户。Homebrew 要求在非 root 用户下安装。"
   echo ""
-  echo "请先创建一个普通用户，再切换到该用户后重新运行此脚本。"
-  echo ""
-  if [[ "$CURRENT_OS" == "Darwin" ]]; then
-    echo "macOS 示例（图形界面）："
-    echo "  1. 打开 系统设置 > 用户与群组"
-    echo "  2. 点击 添加用户"
-    echo "  3. 选择 标准 或 管理员 账户类型"
-    echo "  4. 使用新用户登录后执行: ./install.sh"
-    echo ""
-    echo "macOS 示例（终端）："
-    echo "  sudo sysadminctl -addUser <username> -fullName \"<Full Name>\" -password -"
-    echo "  sudo dseditgroup -o edit -a <username> -t user admin   # 如需管理员权限"
-    echo "  su - <username>"
-    echo "  cd \"$(printf '%s' "$SCRIPT_DIR")\" && ./install.sh"
-  elif [[ "$CURRENT_OS" == "Linux" ]]; then
-    echo "Linux 示例："
-    echo "  sudo adduser <username>"
-    echo "  sudo usermod -aG sudo <username>    # 如需 sudo 权限"
-    echo "  su - <username>"
-    echo "  cd \"$(printf '%s' "$SCRIPT_DIR")\" && ./install.sh"
-  else
-    echo "当前系统: $CURRENT_OS"
-    echo "请创建一个普通用户并切换后，再回到当前目录执行:"
-    echo "  cd \"$(printf '%s' "$SCRIPT_DIR")\" && ./install.sh"
-  fi
+  echo "请先创建一个普通用户，再切换到该用户后重新运行此脚本："
+  echo "  sudo sysadminctl -addUser <username> -fullName \"<Full Name>\" -password -"
+  echo "  sudo dseditgroup -o edit -a <username> -t user admin   # 如需管理员权限"
+  echo "  su - <username>"
+  echo "  cd \"$(printf '%s' "$SCRIPT_DIR")\" && ./install.sh"
   exit 1
 fi
 
-# Linux 下若缺少 zsh，使用系统包管理器安装
-_install_zsh_linux() {
-  if command -v apt-get &>/dev/null; then
-    echo "📦 使用 apt-get 安装 zsh..."
-    sudo apt-get update -y
-    sudo apt-get install -y zsh
-  elif command -v dnf &>/dev/null; then
-    echo "📦 使用 dnf 安装 zsh..."
-    sudo dnf install -y zsh
-  elif command -v yum &>/dev/null; then
-    echo "📦 使用 yum 安装 zsh..."
-    sudo yum install -y zsh
-  elif command -v pacman &>/dev/null; then
-    echo "📦 使用 pacman 安装 zsh..."
-    sudo pacman -Sy --noconfirm zsh
-  elif command -v apk &>/dev/null; then
-    echo "📦 使用 apk 安装 zsh..."
-    sudo apk add --no-cache zsh
-  else
-    echo "❌ 未识别的 Linux 发行版包管理器，请手动安装 zsh 后重试。"
-    return 1
-  fi
-}
-
-# 配置 Zsh 为默认 Shell（提前执行，确保后续步骤在 Zsh 环境下进行）
-CURRENT_SHELL="$(basename "$SHELL")"
-if [[ "$CURRENT_SHELL" != "zsh" ]]; then
-  echo "🐚 配置 Zsh 为默认 Shell..."
-  ZSH_PATH="$(command -v zsh)"
-
-  if [[ -z "$ZSH_PATH" ]]; then
-    if [[ "$CURRENT_OS" == "Linux" ]]; then
-      echo "⚠️  未找到 zsh，尝试通过系统包管理器安装..."
-      _install_zsh_linux || exit 1
-      ZSH_PATH="$(command -v zsh)"
-    fi
-  fi
-
-  if [[ -z "$ZSH_PATH" ]]; then
-    echo "❌ 未找到 zsh，请确认系统已预装或稍后通过 Homebrew 安装。"
-    echo "   将在安装 Homebrew 后重新检查..."
-  else
-    # 确保 zsh 路径在 /etc/shells 中
-    if ! grep -qxF "$ZSH_PATH" /etc/shells; then
-      echo "📝 将 $ZSH_PATH 添加到 /etc/shells..."
-      echo "$ZSH_PATH" | sudo tee -a /etc/shells >/dev/null
-    fi
-
-    chsh -s "$ZSH_PATH"
-    echo "✅ 默认 Shell 已切换为 $ZSH_PATH"
-    echo "⚠️  请注意：Shell 切换将在下次登录时生效"
-  fi
-else
-  echo "✅ Zsh 已是默认 Shell"
-fi
-
-# 中国大陆镜像加速
+# ---------------------------------------------------------------------------
+# 中国大陆镜像加速（macOS 下的 Homebrew 镜像与 Linux 下的 mise 代理提示共用）
+# ---------------------------------------------------------------------------
 _dev_setup_is_china() {
   [[ "$DEV_SETUP_CHINA_MIRROR" == "1" ]] && return 0
   [[ "$DEV_SETUP_CHINA_MIRROR" == "0" ]] && return 1
@@ -142,73 +68,190 @@ _dev_setup_is_china() {
   return 1
 }
 
-if _dev_setup_is_china; then
-  echo "🇨🇳 检测到中国大陆网络，使用 USTC 镜像加速..."
-  export HOMEBREW_API_DOMAIN="https://mirrors.ustc.edu.cn/homebrew-bottles/api"
-  export HOMEBREW_BOTTLE_DOMAIN="https://mirrors.ustc.edu.cn/homebrew-bottles"
-  export HOMEBREW_BREW_GIT_REMOTE="https://mirrors.ustc.edu.cn/brew.git"
-  export HOMEBREW_CORE_GIT_REMOTE="https://mirrors.ustc.edu.cn/homebrew-core.git"
-fi
+# ---------------------------------------------------------------------------
+# Linux 下使用系统包管理器安装基础工具
+# ---------------------------------------------------------------------------
+_install_base_linux() {
+  local pkgs=(git curl wget vim zsh zip unzip tree htop jq build-essential ca-certificates)
+  local sudo_cmd=""
+  [[ "$EUID" -ne 0 ]] && sudo_cmd="sudo"
 
-# 检测并安装 Homebrew
-if ! command -v brew &> /dev/null; then
-  echo "📦 安装 Homebrew..."
+  if command -v apt-get &>/dev/null; then
+    echo "📦 使用 apt-get 安装基础工具..."
+    $sudo_cmd apt-get update -y
+    $sudo_cmd apt-get install -y "${pkgs[@]}"
+  elif command -v dnf &>/dev/null; then
+    echo "📦 使用 dnf 安装基础工具..."
+    # dnf 用 @development-tools 替代 build-essential
+    $sudo_cmd dnf install -y git curl wget vim zsh zip unzip tree htop jq ca-certificates
+    $sudo_cmd dnf groupinstall -y "Development Tools" || true
+  elif command -v yum &>/dev/null; then
+    echo "📦 使用 yum 安装基础工具..."
+    $sudo_cmd yum install -y git curl wget vim zsh zip unzip tree htop jq ca-certificates
+    $sudo_cmd yum groupinstall -y "Development Tools" || true
+  elif command -v pacman &>/dev/null; then
+    echo "📦 使用 pacman 安装基础工具..."
+    $sudo_cmd pacman -Sy --noconfirm git curl wget vim zsh zip unzip tree htop jq base-devel ca-certificates
+  elif command -v apk &>/dev/null; then
+    echo "📦 使用 apk 安装基础工具..."
+    $sudo_cmd apk add --no-cache git curl wget vim zsh zip unzip tree htop jq build-base ca-certificates
+  else
+    echo "❌ 未识别的 Linux 发行版包管理器。"
+    echo "   请手动安装: ${pkgs[*]}，然后重新运行此脚本。"
+    return 1
+  fi
+}
 
-  # 在非交互式环境下（如 curl | bash），stdin 被管道占用
-  # 需要通过 /dev/tty 获取 sudo 权限（root 用户无需 sudo）
-  if [[ ! -t 0 ]] && [[ -n "sudo" ]]; then
-    echo "⚠️  检测到非交互式环境，尝试通过终端获取 sudo 权限..."
-    if [[ -e /dev/tty ]]; then
-      # 通过 /dev/tty 直接从终端读取密码
-      sudo -v < /dev/tty
-    elif sudo -n true 2>/dev/null; then
-      # 已有免密 sudo 或缓存的凭证
-      echo "✅ 已有 sudo 权限"
-    else
-      echo "❌ 无法获取 sudo 权限（无终端且无免密 sudo）"
-      echo "请先运行以下命令获取权限，然后重新执行安装："
-      echo ""
-      echo "  sudo -v && curl -fsSL https://raw.githubusercontent.com/OiAnthony/dev-setup/main/install.sh | bash"
-      echo ""
-      exit 1
+# ---------------------------------------------------------------------------
+# 配置默认 Shell 为 Zsh（确认 zsh 已安装后执行）
+# ---------------------------------------------------------------------------
+_configure_default_shell() {
+  local current_shell
+  current_shell="$(basename "$SHELL")"
+  if [[ "$current_shell" == "zsh" ]]; then
+    echo "✅ Zsh 已是默认 Shell"
+    return 0
+  fi
+
+  local zsh_path
+  zsh_path="$(command -v zsh)"
+  if [[ -z "$zsh_path" ]]; then
+    echo "⚠️  未找到 zsh，跳过默认 shell 切换"
+    return 0
+  fi
+
+  local sudo_cmd=""
+  [[ "$EUID" -ne 0 ]] && sudo_cmd="sudo"
+
+  # 确保 zsh 路径在 /etc/shells 中
+  if [[ -f /etc/shells ]] && ! grep -qxF "$zsh_path" /etc/shells; then
+    echo "📝 将 $zsh_path 添加到 /etc/shells..."
+    echo "$zsh_path" | $sudo_cmd tee -a /etc/shells >/dev/null
+  fi
+
+  # chsh 在容器/某些 root 环境下可能失败（如 PAM 限制），退化为修改 /etc/passwd
+  if chsh -s "$zsh_path" 2>/dev/null; then
+    echo "✅ 默认 Shell 已切换为 $zsh_path（下次登录生效）"
+  elif [[ "$EUID" -eq 0 ]] && command -v usermod &>/dev/null; then
+    usermod -s "$zsh_path" "$(id -un)" && \
+      echo "✅ 默认 Shell 已切换为 $zsh_path（通过 usermod，下次登录生效）"
+  else
+    echo "⚠️  无法切换默认 Shell，请手动执行: chsh -s $zsh_path"
+  fi
+}
+
+# ===========================================================================
+# 平台分流：macOS → Homebrew；Linux（含 root）→ apt + mise
+# ===========================================================================
+
+if [[ "$CURRENT_OS" == "Darwin" ]]; then
+  # -------------------------------------------------------------------------
+  # macOS 路径：Homebrew + Brewfile
+  # -------------------------------------------------------------------------
+
+  _configure_default_shell
+
+  if _dev_setup_is_china; then
+    echo "🇨🇳 检测到中国大陆网络，使用 USTC 镜像加速 Homebrew..."
+    export HOMEBREW_API_DOMAIN="https://mirrors.ustc.edu.cn/homebrew-bottles/api"
+    export HOMEBREW_BOTTLE_DOMAIN="https://mirrors.ustc.edu.cn/homebrew-bottles"
+    export HOMEBREW_BREW_GIT_REMOTE="https://mirrors.ustc.edu.cn/brew.git"
+    export HOMEBREW_CORE_GIT_REMOTE="https://mirrors.ustc.edu.cn/homebrew-core.git"
+  fi
+
+  if ! command -v brew &> /dev/null; then
+    echo "📦 安装 Homebrew..."
+
+    # 在非交互式环境下（如 curl | bash），stdin 被管道占用
+    # 需要通过 /dev/tty 获取 sudo 权限
+    if [[ ! -t 0 ]]; then
+      echo "⚠️  检测到非交互式环境，尝试通过终端获取 sudo 权限..."
+      if [[ -e /dev/tty ]]; then
+        sudo -v < /dev/tty
+      elif sudo -n true 2>/dev/null; then
+        echo "✅ 已有 sudo 权限"
+      else
+        echo "❌ 无法获取 sudo 权限（无终端且无免密 sudo）"
+        echo "请先运行: sudo -v && curl -fsSL https://raw.githubusercontent.com/OiAnthony/dev-setup/main/install.sh | bash"
+        exit 1
+      fi
+    fi
+
+    NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+    # macOS Apple Silicon 需要添加到 PATH
+    if [[ -f "/opt/homebrew/bin/brew" ]]; then
+      eval "$(/opt/homebrew/bin/brew shellenv)"
+    fi
+  else
+    echo "✅ Homebrew 已安装"
+  fi
+
+  if ! command -v brew &> /dev/null; then
+    echo "❌ Homebrew 安装失败或不在 PATH 中，无法继续。"
+    exit 1
+  fi
+
+  echo "📦 安装 Brewfile 软件包..."
+  if brew bundle check --file="$SCRIPT_DIR/Brewfile" &>/dev/null; then
+    echo "✅ 所有 Brewfile 包已安装"
+  else
+    brew bundle --file="$SCRIPT_DIR/Brewfile"
+  fi
+
+elif [[ "$CURRENT_OS" == "Linux" ]]; then
+  # -------------------------------------------------------------------------
+  # Linux 路径（含 root）：apt/dnf/apk + mise
+  # -------------------------------------------------------------------------
+
+  _install_base_linux
+  _configure_default_shell
+
+  # 中国大陆网络提示（mise 无官方镜像，依赖 https_proxy / GITHUB_TOKEN）
+  if _dev_setup_is_china; then
+    echo "🇨🇳 检测到中国大陆网络。"
+    if [[ -z "${https_proxy:-}${HTTPS_PROXY:-}" ]] && [[ -z "${GITHUB_TOKEN:-}" ]]; then
+      echo "   ⚠️  mise 通过 GitHub release 拉取二进制，建议设置 https_proxy 或 GITHUB_TOKEN 加速。"
+      echo "   示例: export https_proxy=http://127.0.0.1:7890"
     fi
   fi
 
-  NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-
-  # macOS Apple Silicon 需要添加到 PATH
-  if [[ -f "/opt/homebrew/bin/brew" ]]; then
-    eval "$(/opt/homebrew/bin/brew shellenv)"
-    # 持久化到 ~/.zshrc
-    if [[ -f ~/.zshrc ]] && ! grep -q "/opt/homebrew/bin/brew shellenv" ~/.zshrc; then
-      echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zshrc
-    fi
-  # Linux 需要添加到 PATH
-  elif [[ -f "/home/linuxbrew/.linuxbrew/bin/brew" ]]; then
-    eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-    # 持久化到 ~/.zshrc
-    if [[ -f ~/.zshrc ]] && ! grep -q "/home/linuxbrew/.linuxbrew/bin/brew shellenv" ~/.zshrc; then
-      echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"' >> ~/.zshrc
-    fi
+  # 安装 mise
+  if ! command -v mise &>/dev/null; then
+    echo "📦 安装 mise..."
+    # 默认安装到 $HOME/.local/bin/mise（root 下即 /root/.local/bin/mise）
+    curl -fsSL https://mise.run | sh
+  else
+    echo "✅ mise 已安装"
   fi
+
+  # 把 mise 加入当前会话 PATH
+  export PATH="$HOME/.local/bin:$PATH"
+
+  if ! command -v mise &>/dev/null; then
+    echo "❌ mise 安装失败或不在 PATH ($HOME/.local/bin) 中，无法继续。"
+    exit 1
+  fi
+
+  # 软链接 mise.toml 到全局配置位置
+  mkdir -p "$HOME/.config/mise"
+  ln -sf "$SCRIPT_DIR/mise.toml" "$HOME/.config/mise/config.toml"
+
+  echo "📦 通过 mise 安装工具链（首次需下载，可能耗时较久）..."
+  # mise install 读取 ~/.config/mise/config.toml
+  mise install || {
+    echo "⚠️  mise install 部分失败，常见原因：网络受限、GitHub release 限流。"
+    echo "   可设置 https_proxy 或 GITHUB_TOKEN 后重新运行。"
+  }
+
 else
-  echo "✅ Homebrew 已安装"
-fi
-
-# 校验 brew 是否可用，后续流程完全依赖 brew
-if ! command -v brew &> /dev/null; then
-  echo "❌ Homebrew 安装失败或不在 PATH 中，无法继续安装。"
-  echo "请参考 https://brew.sh 手动安装后重新运行此脚本。"
+  echo "❌ 不支持的操作系统: $CURRENT_OS"
   exit 1
 fi
 
-# 安装所有软件
-echo "📦 安装软件包..."
-if brew bundle check --file="$SCRIPT_DIR/Brewfile" &>/dev/null; then
-  echo "✅ 所有 Brewfile 包已安装"
-else
-  brew bundle --file="$SCRIPT_DIR/Brewfile"
-fi
+# ===========================================================================
+# 共用步骤：Oh My Zsh、dotfiles、Bun、pnpm、Volta/SDKMAN（仅 macOS）
+# ===========================================================================
 
 # 安装 Oh My Zsh
 if [[ ! -d "$HOME/.oh-my-zsh" ]]; then
@@ -238,7 +281,7 @@ else
   fi
 fi
 
-# 配置文件
+# 配置文件软链接
 echo "🔗 配置 dotfiles..."
 ln -sf "$SCRIPT_DIR/dotfiles/.gitconfig" ~/.gitconfig
 mkdir -p ~/.config
@@ -260,19 +303,28 @@ else
   echo "✅ ~/.zshrc 已包含 dev-setup 配置"
 fi
 
-# 安装 Volta（Node.js 版本管理器）
-if [[ ! -d "$HOME/.volta" ]]; then
-  echo "📦 安装 Volta..."
-  curl https://get.volta.sh | bash
-  export VOLTA_HOME="$HOME/.volta"
-  export PATH="$VOLTA_HOME/bin:$PATH"
-  echo "📦 通过 Volta 安装 Node.js..."
-  volta install node
-else
-  echo "✅ Volta 已安装"
+# Volta + SDKMAN 仅在 macOS 安装；Linux 路径下由 mise 提供 node/java
+if [[ "$CURRENT_OS" == "Darwin" ]]; then
+  if [[ ! -d "$HOME/.volta" ]]; then
+    echo "📦 安装 Volta..."
+    curl https://get.volta.sh | bash
+    export VOLTA_HOME="$HOME/.volta"
+    export PATH="$VOLTA_HOME/bin:$PATH"
+    echo "📦 通过 Volta 安装 Node.js..."
+    volta install node
+  else
+    echo "✅ Volta 已安装"
+  fi
+
+  if [[ ! -d "$HOME/.sdkman" ]]; then
+    echo "📦 安装 SDKMAN..."
+    curl -s "https://get.sdkman.io" | bash
+  else
+    echo "✅ SDKMAN 已安装"
+  fi
 fi
 
-# 安装 Bun
+# Bun（双平台）
 if ! command -v bun &> /dev/null; then
   echo "📦 安装 Bun..."
   curl -fsSL https://bun.sh/install | bash
@@ -280,7 +332,7 @@ else
   echo "✅ Bun 已安装"
 fi
 
-# 安装 pnpm
+# pnpm（双平台）
 if ! command -v pnpm &> /dev/null; then
   echo "📦 安装 pnpm..."
   curl -fsSL https://get.pnpm.io/install.sh | sh -
@@ -288,23 +340,22 @@ else
   echo "✅ pnpm 已安装"
 fi
 
-# 安装 SDKMAN
-if [[ ! -d "$HOME/.sdkman" ]]; then
-  echo "📦 安装 SDKMAN..."
-  curl -s "https://get.sdkman.io" | bash
-else
-  echo "✅ SDKMAN 已安装"
-fi
-
 echo ""
 echo "✨ 安装完成！"
 echo ""
 echo "📝 后续步骤："
 echo "1. 修改 ~/.gitconfig 中的用户名和邮箱"
-echo "2. (可选) 取消注释 ~/.zshrc 中的 Starship 配置以启用自定义提示符"
+if [[ "$CURRENT_OS" == "Linux" ]]; then
+  echo "2. 通过 mise 管理工具版本: mise ls / mise use node@22"
+fi
 echo ""
 
-# 自动激活新环境
+# 自动激活新环境（CI 环境下跳过，避免吞掉后续测试）
+if [[ "${CI:-}" == "true" ]] || [[ "${DEV_SETUP_NO_EXEC:-}" == "1" ]]; then
+  echo "ℹ️  CI/non-interactive mode detected, skipping shell exec."
+  exit 0
+fi
+
 echo "🔄 正在激活新环境..."
 echo "   (如需返回原 shell，请运行 'exit')"
 echo ""

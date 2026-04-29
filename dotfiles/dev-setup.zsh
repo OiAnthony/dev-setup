@@ -15,7 +15,7 @@ ZSH_THEME=""
 plugins=(git npm node docker python docker-compose)
 source $ZSH/oh-my-zsh.sh
 
-# =========== Homebrew ===========
+# =========== 平台工具链 ===========
 
 # 中国大陆镜像加速（通过 DEV_SETUP_CHINA_MIRROR=1/0 覆盖，或自动网络探测）
 _dev_setup_is_china() {
@@ -37,18 +37,25 @@ _dev_setup_is_china() {
   return 1
 }
 
-if _dev_setup_is_china; then
-  export HOMEBREW_API_DOMAIN="https://mirrors.ustc.edu.cn/homebrew-bottles/api"
-  export HOMEBREW_BOTTLE_DOMAIN="https://mirrors.ustc.edu.cn/homebrew-bottles"
-  export HOMEBREW_BREW_GIT_REMOTE="https://mirrors.ustc.edu.cn/brew.git"
-  export HOMEBREW_CORE_GIT_REMOTE="https://mirrors.ustc.edu.cn/homebrew-core.git"
+# macOS: Homebrew + USTC 镜像
+if [[ "$OSTYPE" == darwin* ]]; then
+  if _dev_setup_is_china; then
+    export HOMEBREW_API_DOMAIN="https://mirrors.ustc.edu.cn/homebrew-bottles/api"
+    export HOMEBREW_BOTTLE_DOMAIN="https://mirrors.ustc.edu.cn/homebrew-bottles"
+    export HOMEBREW_BREW_GIT_REMOTE="https://mirrors.ustc.edu.cn/brew.git"
+    export HOMEBREW_CORE_GIT_REMOTE="https://mirrors.ustc.edu.cn/homebrew-core.git"
+  fi
+
+  if [[ -f "/opt/homebrew/bin/brew" ]]; then
+    eval "$(/opt/homebrew/bin/brew shellenv)"
+  elif [[ -f "/usr/local/bin/brew" ]]; then
+    eval "$(/usr/local/bin/brew shellenv)"
+  fi
 fi
 
-# 初始化 Homebrew 环境（兼容 macOS 和 Linux）
-if [[ -f "/opt/homebrew/bin/brew" ]]; then
-  eval "$(/opt/homebrew/bin/brew shellenv)"
-elif [[ -f "/home/linuxbrew/.linuxbrew/bin/brew" ]]; then
-  eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+# Linux: mise（在 PATH 中前置 ~/.local/bin 后再激活）
+if [[ "$OSTYPE" == linux* ]] && command -v mise &>/dev/null; then
+  eval "$(mise activate zsh)"
 fi
 
 # =========== 别名 ===========
@@ -110,9 +117,20 @@ fuck() {
 
 # =========== 包管理器 ===========
 
-# Volta - Node.js 版本管理器
-export VOLTA_HOME="${VOLTA_HOME:-$HOME/.volta}"
-export PATH="$VOLTA_HOME/bin:$PATH"
+# Volta / SDKMAN 仅在 macOS 启用；Linux 下 Node/Java 由 mise 提供
+if [[ "$OSTYPE" == darwin* ]]; then
+  # Volta - Node.js 版本管理器
+  export VOLTA_HOME="${VOLTA_HOME:-$HOME/.volta}"
+  export PATH="$VOLTA_HOME/bin:$PATH"
+
+  # SDKMAN - 懒加载（仅在首次使用 sdk 命令时初始化）
+  export SDKMAN_DIR="${SDKMAN_DIR:-$HOME/.sdkman}"
+  sdk() {
+    unfunction sdk
+    [[ -s "$SDKMAN_DIR/bin/sdkman-init.sh" ]] && source "$SDKMAN_DIR/bin/sdkman-init.sh"
+    sdk "$@"
+  }
+fi
 
 # pnpm - 优先使用环境变量，fallback 到默认路径
 export PNPM_HOME="${PNPM_HOME:-$HOME/Library/pnpm}"
@@ -123,14 +141,6 @@ export PATH
 # bun - 优先使用环境变量，fallback 到默认路径，跳过补全脚本
 export BUN_INSTALL="${BUN_INSTALL:-$HOME/.bun}"
 export PATH="$BUN_INSTALL/bin:$PATH"
-
-# SDKMAN - 懒加载（仅在首次使用 sdk 命令时初始化）
-export SDKMAN_DIR="${SDKMAN_DIR:-$HOME/.sdkman}"
-sdk() {
-  unfunction sdk
-  [[ -s "$SDKMAN_DIR/bin/sdkman-init.sh" ]] && source "$SDKMAN_DIR/bin/sdkman-init.sh"
-  sdk "$@"
-}
 
 # =========== 开发环境 ===========
 

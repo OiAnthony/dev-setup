@@ -1,9 +1,12 @@
-.PHONY: build lint test test-kaku test-idempotent test-all clean
+.PHONY: build lint test test-kaku test-idempotent test-root test-all clean
 
 IMAGE_NAME := dev-setup-test
 
 # 自动检测容器运行时（优先 docker，fallback 到 podman）
 CONTAINER_RUNTIME := $(shell command -v docker 2>/dev/null || command -v podman 2>/dev/null)
+
+# 项目在容器中的固定路径
+PROJECT_PATH := /opt/dev-setup
 
 # 构建镜像
 build:
@@ -19,23 +22,28 @@ lint:
 	@echo "Checking dev-setup.zsh (advisory only)..."
 	shellcheck dotfiles/dev-setup.zsh || echo "Warning: zsh syntax may cause false positives"
 
-# 集成测试
+# 集成测试（普通用户路径）
 test: build
-	@echo "Running integration test..."
-	$(CONTAINER_RUNTIME) run --rm $(IMAGE_NAME) /home/testuser/dev-setup/scripts/test-install.sh
+	@echo "Running integration test (testuser)..."
+	$(CONTAINER_RUNTIME) run --rm -u testuser $(IMAGE_NAME) $(PROJECT_PATH)/scripts/test-install.sh
 
-# Kaku 路径测试
+# Kaku 路径测试（普通用户）
 test-kaku: build
 	@echo "Running Kaku path test..."
-	$(CONTAINER_RUNTIME) run --rm $(IMAGE_NAME) /home/testuser/dev-setup/scripts/test-install.sh --with-kaku
+	$(CONTAINER_RUNTIME) run --rm -u testuser $(IMAGE_NAME) $(PROJECT_PATH)/scripts/test-install.sh --with-kaku
 
-# 幂等性测试
+# 幂等性测试（普通用户）
 test-idempotent: build
 	@echo "Running idempotent test..."
-	$(CONTAINER_RUNTIME) run --rm $(IMAGE_NAME) /home/testuser/dev-setup/scripts/test-idempotent.sh
+	$(CONTAINER_RUNTIME) run --rm -u testuser $(IMAGE_NAME) $(PROJECT_PATH)/scripts/test-idempotent.sh
+
+# Root 路径测试（关键：验证 mise 路径在 root 下也工作）
+test-root: build
+	@echo "Running integration test (root)..."
+	$(CONTAINER_RUNTIME) run --rm -u 0 $(IMAGE_NAME) $(PROJECT_PATH)/scripts/test-install.sh
 
 # 运行所有测试
-test-all: lint test test-kaku test-idempotent
+test-all: lint test test-kaku test-idempotent test-root
 	@echo "All tests passed!"
 
 # 清理容器和镜像

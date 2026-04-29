@@ -35,6 +35,7 @@ main() {
         log_error "First run failed"
         exit 1
     fi
+    export PATH="$HOME/.local/bin:$PATH"
 
     log_info "Recording state after first run..."
     local gitconfig_md5

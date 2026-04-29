@@ -1,0 +1,37 @@
+# mise tool manifest (Linux/server path; macOS still uses Brewfile).
+# install.sh symlinks this file to ~/.config/mise/config.toml so it is
+# the global mise configuration on the host.
+#
+# Backends:
+#   - aqua/ubi: prebuilt GitHub release binaries (no toolchain required)
+#   - core: mise built-in language runtimes
+#
+# To pin a version, replace "latest" with a concrete version string.
+
+[tools]
+
+# Language runtimes (replace Volta + SDKMAN on Linux)
+node    = "lts"
+go      = "latest"
+python  = "3.14"
+java    = "21"
+uv      = "latest"
+
+# Shell + CLI tooling
+"aqua:starship/starship"           = "latest"
+"aqua:junegunn/fzf"                = "latest"
+"aqua:ajeetdsouza/zoxide"          = "latest"
+"aqua:sharkdp/fd"                  = "latest"
+"aqua:BurntSushi/ripgrep"          = "latest"
+"aqua:cli/cli"                     = "latest"   # gh
+"aqua:jesseduffield/lazygit"       = "latest"
+"aqua:dandavison/delta"            = "latest"   # git-delta
+"aqua:neovim/neovim"               = "latest"
+"aqua:aristocratos/btop"           = "latest"
+"aqua:sxyazi/yazi"                 = "latest"
+
+[settings]
+# Trust this config when symlinked into ~/.config/mise/config.toml.
+# (mise prompts on first use of repo-local configs; the global file is
+# implicitly trusted, but we set this explicitly for clarity.)
+experimental = true
