@@ -68,6 +68,35 @@ _dev_setup_is_china() {
   return 1
 }
 
+# 预热 sudo 认证，后续需要提权的步骤尽量复用这次授权。
+_ensure_sudo() {
+  if [[ "$EUID" -eq 0 ]]; then
+    return 0
+  fi
+
+  if sudo -n true 2>/dev/null; then
+    echo "✅ 已有 sudo 权限"
+    return 0
+  fi
+
+  if [[ -t 0 ]]; then
+    echo "🔐 需要 sudo 权限以安装依赖并配置默认 Shell..."
+    sudo -v
+    return 0
+  fi
+
+  echo "⚠️  检测到非交互式环境，尝试通过终端获取 sudo 权限..."
+  if exec 3</dev/tty 2>/dev/null; then
+    sudo -v < /dev/tty
+    exec 3<&-
+    return 0
+  fi
+
+  echo "❌ 无法获取 sudo 权限（无终端且无免密 sudo）"
+  echo "请先运行: sudo -v && curl -fsSL https://raw.githubusercontent.com/OiAnthony/dev-setup/main/install.sh | bash"
+  exit 1
+}
+
 # ---------------------------------------------------------------------------
 # 安装 mise 并应用工具清单（macOS / Linux 共用）
 # ---------------------------------------------------------------------------
@@ -189,17 +218,23 @@ _configure_default_shell() {
   local sudo_cmd=""
   [[ "$EUID" -ne 0 ]] && sudo_cmd="sudo"
 
+  if [[ -n "$sudo_cmd" ]]; then
+    _ensure_sudo
+  fi
+
   # 确保 zsh 路径在 /etc/shells 中
   if [[ -f /etc/shells ]] && ! grep -qxF "$zsh_path" /etc/shells; then
     echo "📝 将 $zsh_path 添加到 /etc/shells..."
     echo "$zsh_path" | $sudo_cmd tee -a /etc/shells >/dev/null
   fi
 
-  # chsh 在容器/某些 root 环境下可能失败（如 PAM 限制），退化为修改 /etc/passwd
-  if chsh -s "$zsh_path" 2>/dev/null; then
+  # 优先复用 sudo 认证，避免 chsh 再次单独要求输入密码。
+  if [[ -n "$sudo_cmd" ]] && $sudo_cmd chsh -s "$zsh_path" "$(id -un)" 2>/dev/null; then
     echo "✅ 默认 Shell 已切换为 $zsh_path（下次登录生效）"
-  elif [[ "$EUID" -eq 0 ]] && command -v usermod &>/dev/null; then
-    usermod -s "$zsh_path" "$(id -un)" && \
+  elif chsh -s "$zsh_path" 2>/dev/null; then
+    echo "✅ 默认 Shell 已切换为 $zsh_path（下次登录生效）"
+  elif command -v usermod &>/dev/null; then
+    $sudo_cmd usermod -s "$zsh_path" "$(id -un)" && \
       echo "✅ 默认 Shell 已切换为 $zsh_path（通过 usermod，下次登录生效）"
   else
     echo "⚠️  无法切换默认 Shell，请手动执行: chsh -s $zsh_path"
@@ -228,20 +263,7 @@ if [[ "$CURRENT_OS" == "Darwin" ]]; then
   if ! command -v brew &> /dev/null; then
     echo "📦 安装 Homebrew（仅本体，工具链由 mise 管理）..."
 
-    # 在非交互式环境下（如 curl | bash），stdin 被管道占用
-    # 需要通过 /dev/tty 获取 sudo 权限
-    if [[ ! -t 0 ]]; then
-      echo "⚠️  检测到非交互式环境，尝试通过终端获取 sudo 权限..."
-      if [[ -e /dev/tty ]]; then
-        sudo -v < /dev/tty
-      elif sudo -n true 2>/dev/null; then
-        echo "✅ 已有 sudo 权限"
-      else
-        echo "❌ 无法获取 sudo 权限（无终端且无免密 sudo）"
-        echo "请先运行: sudo -v && curl -fsSL https://raw.githubusercontent.com/OiAnthony/dev-setup/main/install.sh | bash"
-        exit 1
-      fi
-    fi
+    _ensure_sudo
 
     NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
@@ -353,7 +375,8 @@ fi
 # pnpm（双平台）
 if ! command -v pnpm &> /dev/null; then
   echo "📦 安装 pnpm..."
-  curl -fsSL https://get.pnpm.io/install.sh | sh -
+  PNPM_INSTALL_SHELL="${SHELL:-$(command -v zsh || command -v bash || echo /bin/sh)}"
+  curl -fsSL https://get.pnpm.io/install.sh | env SHELL="$PNPM_INSTALL_SHELL" sh -
 else
   echo "✅ pnpm 已安装"
 fi
@@ -378,4 +401,14 @@ echo "🔄 正在激活新环境..."
 echo "   (如需返回原 shell，请运行 'exit')"
 echo ""
 sleep 1
-exec zsh -l
+
+# curl | bash 场景下，zsh 不能继续复用管道 stdin，否则会把剩余脚本继续执行。
+if [[ -t 0 ]]; then
+  exec zsh -l
+elif exec 3</dev/tty 2>/dev/null; then
+  exec 3<&-
+  exec zsh -l < /dev/tty
+else
+  echo "ℹ️  当前环境没有可用终端，跳过自动激活。"
+  echo "   请手动运行: zsh -l"
+fi

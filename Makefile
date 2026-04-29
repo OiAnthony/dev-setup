@@ -1,4 +1,4 @@
-.PHONY: build lint test test-kaku test-idempotent test-root test-all clean
+.PHONY: build lint test test-kaku test-idempotent test-piped test-root test-all clean
 
 IMAGE_NAME := dev-setup-test
 
@@ -37,13 +37,18 @@ test-idempotent: build
 	@echo "Running idempotent test..."
 	$(CONTAINER_RUNTIME) run --rm -u testuser $(IMAGE_NAME) $(PROJECT_PATH)/scripts/test-idempotent.sh
 
+# curl | bash 场景回归测试（普通用户）
+test-piped: build
+	@echo "Running piped install regression test..."
+	$(CONTAINER_RUNTIME) run --rm -u testuser $(IMAGE_NAME) $(PROJECT_PATH)/scripts/test-piped-install.sh
+
 # Root 路径测试（关键：验证 mise 路径在 root 下也工作）
 test-root: build
 	@echo "Running integration test (root)..."
 	$(CONTAINER_RUNTIME) run --rm -u 0 $(IMAGE_NAME) $(PROJECT_PATH)/scripts/test-install.sh
 
 # 运行所有测试
-test-all: lint test test-kaku test-idempotent test-root
+test-all: lint test test-kaku test-idempotent test-piped test-root
 	@echo "All tests passed!"
 
 # 清理容器和镜像
