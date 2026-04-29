@@ -1,232 +1,156 @@
 # 开发环境自动化配置
 
-快速在新 macOS 或 Linux（Ubuntu/Debian/Fedora/Alpine 等）机器上还原开发环境。支持 Oh My Zsh + Kaku 双系统优化，启动性能提升 80-120ms。中国大陆网络自动切换 USTC 镜像加速（macOS Homebrew 本体）。
+🥷 一份在新 macOS 或 Linux 机器上还原开发环境的脚本。一条命令把工具链、配置文件、Zsh 插件铺好，重复跑也不会出问题。
 
-> **平台策略**
-> - **macOS / Linux 共用**：使用 [mise](https://mise.jdx.dev) 通过 `mise.toml` 安装所有开发 CLI 与运行时（Node/Go/Python/Java/uv 等）。
-> - **macOS 额外**：保留 Homebrew 本体（用户日常 `brew install` 兜底，本项目不再依赖 Brewfile）；通过脚本下载 Maple Mono / JetBrains Mono Nerd Font 到 `~/Library/Fonts/`。
-> - **Linux（含 root）额外**：使用系统包管理器（apt/dnf/apk）安装基础工具（git/curl/zsh/zip/build-essential 等）。
+工具链统一交给 [mise](https://mise.jdx.dev) 管理，靠 `mise.toml` 一份清单同时覆盖 macOS 和 Linux（Ubuntu/Debian/Fedora/Alpine，包括 root）。Linux 上不依赖 Homebrew，绕开了它对 root 的限制。如果检测到机器在中国大陆，macOS 上的 Homebrew 本体会自动切到 USTC 镜像；mise 仍然走 GitHub release，必要时配 `https_proxy` 或 `GITHUB_TOKEN`。
 
 ## 快速开始
 
-### 一键安装（推荐）
+一键安装：
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/OiAnthony/dev-setup/main/install.sh | bash
 ```
 
-### 克隆后安装
+或者克隆后再执行：
 
 ```bash
 git clone https://github.com/OiAnthony/dev-setup.git
 cd dev-setup
-chmod +x install.sh
 ./install.sh
 ```
 
-安装完成后运行：
+装完之后 `source ~/.zshrc` 生效，或者直接开一个新终端。
 
-```bash
-source ~/.zshrc
-```
+## 工具清单
 
-## 包含的工具
+跨平台的部分都在 [`mise.toml`](mise.toml) 里：
 
-### 开发 CLI 与运行时（macOS + Linux 共用，由 mise 管理）
+- CLI：starship、fzf、zoxide、fd、ripgrep、gh、lazygit、git-delta、neovim、btop、yazi、jq
+- 运行时：Node.js（LTS）、Go、Python 3.14、uv、Java 21
 
-详见 [`mise.toml`](mise.toml)：
+后端优先 `aqua:` 和 `ubi:`，拉的是 GitHub release 的预编译二进制，不需要本地有编译工具链，root 也能装。
 
-- **CLI**：starship、fzf、zoxide、fd、ripgrep、gh、lazygit、git-delta、neovim、btop、yazi、jq
-- **运行时**：Node.js、Go、Python、uv、Java
-- 后端优先 `aqua:` / `ubi:`（GitHub release 预编译二进制，无需编译工具链，root 友好）
+平台差异：
 
-### macOS 独有
+- macOS 会保留 Homebrew 本体（项目本身不再用 Brewfile，留给日常 `brew install` 兜底），并下载 Maple Mono NF CN 和 JetBrains Mono Nerd Font 到 `~/Library/Fonts/`
+- Linux 用系统包管理器（apt/dnf/apk）装 git、curl、zsh、zip、build-essential 这类基础工具
+- Bun、pnpm 在两端都通过官方脚本装，没有走 mise
+- Oh My Zsh 和常用插件用 git clone 拉下来
 
-- **Homebrew 本体**（保留，但本项目不再用 `brew bundle`；用户可自由 `brew install` 任何额外工具）
-- **字体**（脚本下载到 `~/Library/Fonts/`）：Maple Mono NF CN、JetBrains Mono Nerd Font
+## 配置文件
 
-### Linux 独有（apt/dnf/apk）
+`install.sh` 不会覆盖 `~/.zshrc`，只在末尾追加一行 `source ".../dotfiles/dev-setup.zsh"`。其他配置走软链接：
 
-基础系统工具：`git curl wget vim zsh zip unzip tree htop jq build-essential`
+| 软链接 | 指向 |
+|--------|------|
+| `~/.gitconfig` | `dotfiles/.gitconfig` |
+| `~/.config/starship.toml` | `dotfiles/starship.toml` |
+| `~/.config/mise/config.toml` | `mise.toml` |
 
-### 自动安装（双平台）
+`dev-setup.zsh` 是运行时入口，里面包含 PATH、别名、`mise activate`、Oh My Zsh、fzf、zoxide、yazi、pnpm、bun、Go 的环境配置。如果检测到 [Kaku.app](https://kaku.app) 已经装了，会跳过 Oh My Zsh 重复加载的插件，把这部分交给 Kaku，启动时间能省 80–120ms，详见 [docs/zsh-optimization.md](docs/zsh-optimization.md)。
 
-- **Bun**：JavaScript 运行时（官方安装脚本）
-- **pnpm**：Node.js 包管理器（官方安装脚本）
-- **Oh My Zsh** + Zsh 插件（git clone）
+内置别名：
 
-## 配置文件说明
-
-本项目采用模块化配置，核心文件通过 `source` 加载而非覆盖 `~/.zshrc`：
-
-- `dev-setup.zsh`：统一的开发环境配置（PATH、别名、工具初始化）
-  - 自动检测并集成 Kaku（如已安装）
-  - 包含 Oh My Zsh、fzf、zoxide、yazi 等工具配置
-  - 跨平台 `mise activate`，外加 pnpm、bun、Go 等环境变量
-- `.gitconfig`：Git 配置（delta diff、zdiff3 合并、常用别名）
-- `starship.toml`：Starship 提示符配置（极简单行风格）
-
-### 内置别名
-
-| 别名 | 实际命令 | 说明 |
+| 别名 | 实际命令 | 备注 |
 |------|---------|------|
-| `docker` | `podman` | 使用 podman 替代 docker（如已安装） |
-| `code` | `code-insiders` | VS Code Insiders（如已安装） |
-| `python` | `python3` | Python 3 |
-| `pip` | `pip3` | Python 3 包管理器 |
+| `docker` | `podman` | 装了 podman 才生效 |
+| `code` | `code-insiders` | 装了 Insiders 才生效 |
+| `python` | `python3` | |
+| `pip` | `pip3` | |
 | `cc` | `claude` | Claude Code CLI |
 | `oc` | `opencode` | OpenCode CLI |
-| `y` | yazi 函数 | 文件管理器（支持 cd 跟随） |
+| `y` | yazi 函数 | 退出时 cd 到所在目录 |
 
-### Kaku 集成
+## 首次使用
 
-如已安装 [Kaku.app](https://kaku.app)，配置会自动优化：
+`.gitconfig` 里的用户名和邮箱是占位的，记得改：
 
-- 插件由 Kaku 统一管理（syntax-highlighting、autosuggestions、completions）
-- 避免与 Oh My Zsh 重复加载，启动速度提升 80-120ms
-- 详见 [docs/zsh-optimization.md](docs/zsh-optimization.md)
+```bash
+vim ~/.gitconfig
+```
 
-## 首次使用指南
-
-1. **修改 Git 用户信息**：
-
-   ```bash
-   vim ~/.gitconfig
-   # 修改 user.name 和 user.email
-   ```
-
-2. **重新加载配置**：
-
-   ```bash
-   source ~/.zshrc
-   ```
+然后 `source ~/.zshrc`。
 
 ## 维护
 
-### 同步本机环境到 repo
-
-编辑仓库根目录的 `mise.toml` 增删工具，然后：
+要加新工具，往 `mise.toml` 里加一行（优先 `aqua:` 或 `ubi:`），然后：
 
 ```bash
 mise install
-git add mise.toml
-git commit -m "chore: update mise tool list"
-git push
+git commit -am "chore: add <tool>"
 ```
 
-### 添加新工具
+如果某个工具在 mise registry 里找不到：macOS 可以用 `brew install` 临时装一份，但不要进 repo；Linux 用对应发行版的包管理器或 cargo/pip。
 
-在 `mise.toml` 中加一行（优先 `aqua:`/`ubi:` 后端），运行 `mise install`。如某工具在 mise registry 中不可用：
+改 shell 配置直接编辑 `dotfiles/dev-setup.zsh`，软链接已经做过，不需要再同步。
 
-- macOS：可用 `brew install <name>` 临时安装（不进 repo）
-- Linux：通过对应发行版包管理器或 cargo/pip 等
+## 在 Linux 服务器（含 root）使用
 
-### 更新配置文件
-
-编辑 `dotfiles/dev-setup.zsh` 或其他配置文件，然后提交：
+直接以 root 跑：
 
 ```bash
-git commit -am "chore: update dev-setup configuration"
-git push
+curl -fsSL https://raw.githubusercontent.com/OiAnthony/dev-setup/main/install.sh | bash
+```
+
+中国大陆环境一般要先把代理或 token 设上，否则 mise 拉 GitHub release 会卡：
+
+```bash
+export https_proxy=http://127.0.0.1:7890
+export GITHUB_TOKEN=ghp_xxx
+curl -fsSL https://raw.githubusercontent.com/OiAnthony/dev-setup/main/install.sh | bash
+```
+
+`dev-setup.zsh` 会自动 `mise activate`，所以新 shell 里 mise 管的工具直接能用。也可以用 `mise exec -- <cmd>` 临时调一次。常用：
+
+```bash
+mise ls                    # 看已装版本
+mise use --global node@22  # 切全局 Node 版本
+mise install               # 按 mise.toml 装/更新
 ```
 
 ## 项目结构
 
 ```
 dev-setup/
-├── install.sh              # 主安装脚本（macOS → brew 本体 + mise + 字体；Linux → apt + mise）
-├── mise.toml               # 跨平台工具清单（软链接到 ~/.config/mise/config.toml）
-├── Makefile                # 测试命令入口（make test-all / make test-root）
-├── Dockerfile              # Docker 测试环境（Ubuntu 24.04，覆盖 testuser + root 双路径）
-├── CLAUDE.md               # Claude Code 项目指南
-├── AGENTS.md               # 同 CLAUDE.md（兼容性）
-├── dotfiles/               # 配置文件
-│   ├── dev-setup.zsh      # 统一环境配置（macOS/Linux 共用 mise activate）
-│   ├── .gitconfig         # Git 配置（软链接到 ~/.gitconfig）
-│   └── starship.toml      # Starship 配置（软链接到 ~/.config/starship.toml）
-├── scripts/                # 测试脚本
-│   ├── test-install.sh    # 集成测试（按 OS 分支验证）
+├── install.sh              # 安装入口（macOS → brew + mise + 字体；Linux → 系统包 + mise）
+├── mise.toml               # 工具清单，软链接到 ~/.config/mise/config.toml
+├── Makefile                # 测试入口
+├── Dockerfile              # 测试用容器（Ubuntu 24.04，覆盖 testuser 和 root）
+├── dotfiles/
+│   ├── dev-setup.zsh      # 运行时配置，追加 source 到 ~/.zshrc
+│   ├── .gitconfig
+│   └── starship.toml
+├── scripts/
+│   ├── test-install.sh    # 集成测试
 │   └── test-idempotent.sh # 幂等性测试
-└── docs/                   # 文档
-    ├── zsh-optimization.md # Zsh 性能优化说明
-    └── testing.md          # 测试架构文档
-```
-
-## 特性
-
-- ✅ 跨平台（macOS + Linux Ubuntu/Debian/Fedora/Alpine）统一使用 mise
-- ✅ **Linux root 用户支持**（通过 mise，绕开 Homebrew 限制）
-- ✅ 幂等性设计（可重复运行）
-- ✅ 智能 Kaku 集成（自动检测并优化）
-- ✅ 模块化配置（通过 source 加载，不覆盖现有 .zshrc）
-- ✅ 软链接管理（配置文件自动同步）
-- ✅ 中国大陆镜像加速（macOS Homebrew 本体走 USTC；mise 走 `https_proxy` / `GITHUB_TOKEN`）
-- ✅ Docker 隔离测试（普通用户 + root 双路径）
-
-## 在 Linux 服务器（含 root）使用
-
-```bash
-# 直接以 root 一键安装
-curl -fsSL https://raw.githubusercontent.com/OiAnthony/dev-setup/main/install.sh | bash
-```
-
-中国大陆环境建议先设置代理：
-
-```bash
-export https_proxy=http://127.0.0.1:7890
-# 或使用 GITHUB_TOKEN 提高 release 限流
-export GITHUB_TOKEN=ghp_xxx
-curl -fsSL https://raw.githubusercontent.com/OiAnthony/dev-setup/main/install.sh | bash
-```
-
-mise 管理的工具不一定出现在裸 PATH 中，使用 `mise activate`（已在 `dev-setup.zsh` 中自动 eval）后或通过 `mise exec -- <cmd>` 调用。常用命令：
-
-```bash
-mise ls                    # 列出已安装版本
-mise use --global node@22  # 全局切换 Node.js 版本
-mise install               # 按 mise.toml 安装/更新所有工具
+└── docs/
+    ├── zsh-optimization.md
+    └── testing.md
 ```
 
 ## 测试
 
-项目包含自动化测试，验证安装脚本在干净环境下的正确性。
-
-### 本地测试
+测试跑在 Docker 容器里，验证安装脚本在干净环境下能不能工作，以及重复跑会不会出岔子。
 
 ```bash
-# 安装 ShellCheck（如果未安装）
-brew install shellcheck
+brew install shellcheck   # 静态检查依赖
 
-# 静态检查
-make lint
-
-# 运行所有测试（需要 Docker）
-make test-all
-
-# 单独运行测试
-make test              # 集成测试（普通用户 / Linux）
-make test-kaku         # Kaku 路径测试
-make test-idempotent   # 幂等性测试
-make test-root         # Linux root 路径测试
+make lint                 # shellcheck install.sh + dev-setup.zsh
+make test                 # 集成测试（普通用户路径）
+make test-kaku            # 验证 Kaku 检测分支
+make test-idempotent      # 重复跑两次，diff 应该为空
+make test-root            # Linux root 路径
+make test-all             # 上面全跑一遍
 ```
 
-### CI/CD
-
-本地测试使用 Docker 容器验证安装脚本：
-
-- ShellCheck 静态检查
-- Docker 容器集成测试
-- Kaku 检测逻辑验证
-- 幂等性验证
-
-详见 `docs/testing.md`。
+如果改了 `install.sh` 的行为，对应的 `scripts/test-install.sh` 或 `test-idempotent.sh` 一般也要一起改。详见 [docs/testing.md](docs/testing.md)。
 
 ## 注意事项
 
-- 工具链统一由 mise 管理；macOS 上 Homebrew 仅保留本体作为日常兜底
-- **不要提交敏感信息**（SSH 私钥、API token、密码等）
-- 首次使用需修改 `.gitconfig` 中的用户名和邮箱
-- `install.sh` 采用追加模式，不会覆盖现有 `~/.zshrc` 内容
+- 不要把 SSH 私钥、API token、密码这类东西提交进来
+- `install.sh` 是追加模式，不会动 `~/.zshrc` 已有内容，但会保证 `dev-setup.zsh` 那一行只出现一次
+- macOS 上 Homebrew 只是兜底，本项目不再依赖 Brewfile
 
 ## 致谢
 
