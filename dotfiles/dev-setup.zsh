@@ -55,6 +55,7 @@ fi
 
 # mise: 跨平台工具链管理（macOS + Linux 共用）
 if command -v mise &>/dev/null; then
+  eval "$(mise activate zsh --shims)"
   eval "$(mise activate zsh)"
 fi
 
