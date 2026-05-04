@@ -67,6 +67,7 @@ fi
 alias python="python3"
 alias pip="pip3"
 alias cc="claude"
+alias cc-yolo="claude --dangerously-skip-permissions"
 alias oc="opencode"
 
 # =========== CLI 工具 ===========
