@@ -9,30 +9,36 @@
 # To pin a version, replace "latest" with a concrete version string.
 
 [tools]
+# Language runtimes
+node = "lts"
+bun = "latest"
+go = "latest"
+java = "21"
+python = "3.14"
+uv = "latest"
 
-# Language runtimes (replace Volta + SDKMAN)
-node    = "lts"
-go      = "latest"
-python  = "3.14"
-java    = "21"
-uv      = "latest"
+# Shell experience
+"aqua:starship/starship" = "latest"
+"aqua:ajeetdsouza/zoxide" = "latest"
+"aqua:sxyazi/yazi" = "latest"
+"aqua:junegunn/fzf" = "latest"
+"aqua:sharkdp/fd" = "latest"
+"aqua:BurntSushi/ripgrep" = "latest"
+"aqua:jqlang/jq" = "latest"
+"aqua:neovim/neovim" = "latest"
+# Git tooling
+"aqua:cli/cli" = "latest"               # gh
+"aqua:dandavison/delta" = "latest"      # git-delta
+"aqua:jesseduffield/lazygit" = "latest"
 
-# Shell + CLI tooling
-"aqua:starship/starship"           = "latest"
-"aqua:junegunn/fzf"                = "latest"
-"aqua:ajeetdsouza/zoxide"          = "latest"
-"aqua:sharkdp/fd"                  = "latest"
-"aqua:BurntSushi/ripgrep"          = "latest"
-"aqua:cli/cli"                     = "latest"   # gh
-"aqua:jesseduffield/lazygit"       = "latest"
-"aqua:dandavison/delta"            = "latest"   # git-delta
-"aqua:neovim/neovim"               = "latest"
-"aqua:aristocratos/btop"           = "latest"
-"aqua:sxyazi/yazi"                 = "latest"
-"aqua:jqlang/jq"                   = "latest"
+# AI
+"aqua:anthropics/claude-code" = "latest"
 
 [settings]
 # Trust this config when symlinked into ~/.config/mise/config.toml.
 # (mise prompts on first use of repo-local configs; the global file is
 # implicitly trusted, but we set this explicitly for clarity.)
 experimental = true
+
+[settings.npm]
+package_manager = "bun"
