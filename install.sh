@@ -98,6 +98,42 @@ _ensure_sudo() {
 }
 
 # ---------------------------------------------------------------------------
+# 通用 JSON 键值对写入（文件不存在时创建，键已存在时跳过）
+# ---------------------------------------------------------------------------
+_ensure_json_key() {
+  local file="$1" key="$2" value="$3"
+
+  if [[ ! -f "$file" ]]; then
+    mkdir -p "$(dirname "$file")"
+    printf '{"%s": %s}\n' "$key" "$value" > "$file"
+    return 0
+  fi
+
+  if grep -q "\"$key\"" "$file" 2>/dev/null; then
+    return 0
+  fi
+
+  local py
+  if command -v python3 &>/dev/null; then
+    py="python3"
+  elif command -v mise &>/dev/null; then
+    py="mise exec python3 -- python3"
+  else
+    echo "⚠️  python3 不可用，无法更新 $file"
+    return 1
+  fi
+
+  $py -c "
+import json
+with open('$file') as f:
+    data = json.load(f)
+data['$key'] = $value
+with open('$file', 'w') as f:
+    json.dump(data, f, indent=2)
+"
+}
+
+# ---------------------------------------------------------------------------
 # 安装 mise 并应用工具清单（macOS / Linux 共用）
 # ---------------------------------------------------------------------------
 _install_mise() {
@@ -380,6 +416,13 @@ if ! command -v pnpm &> /dev/null; then
 else
   echo "✅ pnpm 已安装"
 fi
+
+# Claude Code 安装后配置
+echo "🔧 配置 Claude Code..."
+_ensure_json_key "$HOME/.claude.json" "hasCompletedOnboarding" "true" && \
+  echo "✅ ~/.claude.json 已就绪"
+_ensure_json_key "$HOME/.claude/config.json" "primaryApiKey" '"any"' && \
+  echo "✅ ~/.claude/config.json 已就绪"
 
 echo ""
 echo "✨ 安装完成！"
